@@ -9,10 +9,10 @@ truncate_svd(decomposition, rank)
 \arguments{
 \item{decomposition}{List. List with entries 'u', 'd', and 'v'from the svd function.}
 
-\item{rank}{List. List with entries 'u', 'd', and 'v'from the svd function.}
+\item{rank}{Integer. The number of singular values/vectors to retain.}
 }
 \value{
-The trucated robust SVD of X.
+The truncated robust SVD of X.
 }
 \description{
 Removes columns from the U, D, V matrix computed form an SVD.

@@ -34,9 +34,9 @@ get_sv_threshold <- function(singular_values, rank){
 #'
 #'
 #' @param decomposition List. List with entries 'u', 'd', and 'v'from the svd function.
-#' @param rank List. List with entries 'u', 'd', and 'v'from the svd function.
+#' @param rank Integer. The number of singular values/vectors to retain.
 #'
-#' @return The trucated robust SVD of X.
+#' @return The truncated robust SVD of X.
 truncate_svd <- function(decomposition, rank){
 
   if(rank==0){
@@ -78,6 +78,7 @@ svd_reconstruction <- function(decomposition){
 #' @param SVD List. The SVD decomposition of the matrix. List with entries 'u', 'd', and 'v'from the svd function.
 #' @param signal_rank Integer.
 #' @param num_samples Integer. Number of vectors selected for resampling procedure.
+#' @param num_cores Integer. Number of parallel cores to use (default 2).
 
 
 get_wedin_bound_samples <- function(X, SVD, signal_rank, num_samples=1000,
@@ -110,6 +111,7 @@ get_wedin_bound_samples <- function(X, SVD, signal_rank, num_samples=1000,
 #' @param perp_basis Matrix. Either U_perp or V_perp: the remaining left/right singluar vectors of X after estimating the signal rank.
 #' @param right_vectors Boolean. Right multiplication or left multiplication.
 #' @param num_samples Integer. Number of vectors selected for resampling procedure.
+#' @param num_cores Integer. Number of parallel cores to use (default 2).
 #' @importFrom foreach %dopar%
 
 wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=1000,
@@ -141,16 +143,20 @@ wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=100
   as.numeric(resampled_norms)
 }
 
-#' Estimate the wedin bound for a data matrix.
+#' Estimate the random direction bound for data matrices.
 #'
-#' Samples from the random direction bound. Returns on the scale of squared singular value.
+#' Samples from the random direction distribution by generating Gaussian random
+#' matrices and computing the leading squared singular value of the concatenated
+#' subspace matrix.  Returns samples on the scale of squared singular values.
 #'
 #' @param n_obs The number of observations.
-#' @param dims The number of features in each data matrix
+#' @param dims The number of features in each data matrix.
 #' @param num_samples Integer. Number of vectors selected for resampling procedure.
+#' @param num_cores Integer. Number of parallel cores to use (default 2).
 #' @importFrom stats rnorm
 #'
-#' @return rand_dir_samples
+#' @return A numeric vector of length \code{num_samples} containing the
+#'   random-direction bound samples.
 
 get_random_direction_bound_robustH <- function(n_obs, dims, num_samples=1000,
                                                num_cores=2){
@@ -357,15 +363,19 @@ cowplot::plot_grid(plotlist = heatmap_listR, ncol = K)
 }
 
 #' Decomposition Heatmaps
+#' Plot data block heatmap
 #'
-#' Visualization of the RaJIVE decomposition, it shows heatmaps of the decomposition obtained by RaJIVE
+#' Visualization helper for individual data blocks or decomposition components.
+#' Produces a raster heatmap using \pkg{ggplot2} with a rainbow colour scale.
 #'
 #'
-#' @param data List. The initial data blocks.
+#' @param data Matrix or data frame. The data to plot as a heatmap.
 #' @param show_color_bar Boolean.
 #' @param title Character.
 #' @param xlab Character.
 #' @param ylab Character
+#'
+#' @return A \code{ggplot} object.
 #'
 #' @import ggplot2
 #' @importFrom grDevices rainbow

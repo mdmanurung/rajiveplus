@@ -1,0 +1,960 @@
+---
+title: "Function Gallery: rajiveplus API Showcase"
+author: "rajiveplus package authors"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Function Gallery: rajiveplus API Showcase}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse   = TRUE,
+  comment    = "#>",
+  fig.width  = 7,
+  fig.height = 5,
+  message    = FALSE,
+  warning    = FALSE
+)
+run_heavy <- FALSE   # set to TRUE once to regenerate all cached .rds files
+data_dir  <- "data"
+```
+
+## Overview
+
+This gallery showcases every exported user-facing function in **rajiveplus**
+using a lightweight three-block simulation so all examples run quickly. For a
+real-data application see `vignette("cll_application")`.
+
+Each section follows the same structure:
+
+> **Function name** – why you need it  
+> *Code example*  
+> *Interpretation: what to expect*
+
+### Gallery Roadmap
+
+| Category | Functions |
+|---|---|
+| Simulation | `ajive.data.sim` |
+| Core decomposition | `Rajive` |
+| S3 — *rajive* class | `print`, `summary` |
+| Rank accessors | `get_joint_rank`, `get_individual_rank`, `get_all_ranks` |
+| Component extractors | `get_joint_scores`, `get_block_scores`, `get_block_loadings`, `get_block_matrix` |
+| Diagnostic extraction | `extract_components` (5 `what` modes) |
+| Decomposition visualization | `data_heatmap`, `decomposition_heatmaps_robustH` |
+| Variance explained | `showVarExplained_robust`, `plot_variance_explained` |
+| Score plots | `plot_scores`, `plot_components` (`pairs`, `density`) |
+| AJIVE diagnostic plots | `plot_components` (`rank_threshold`, `bound_distributions`, `ajive_diagnostic`) |
+| Feature visualization | `plot_components` (`top_features`, `component_heatmap`) |
+| S3 autoplot / fortify | `autoplot`, `fortify` |
+| Feature ranking | `rank_features` (4 modes) + 3 wrappers |
+| Association testing | `associate_components` (4 modes) + 3 wrappers; `plot_components` (`association`) |
+| Stability | `assess_stability` (3 targets) + 2 wrappers; `plot_stability_heatmap`; `plot_components` (`stability`) |
+| Summarization | `summarize_components` (6 `summary_type` values) |
+| Jackstraw | `jackstraw_rajive`; `print`, `summary`, `autoplot`, `fortify`; `plot_jackstraw` (3 types); `plot_components` (`volcano`, `jackstraw_summary`); `get_significant_vars`; `summarize_significant_vars` |
+| Reporting / export | `export_results`, `rajive_report` |
+
+---
+
+## Prerequisites
+
+```{r setup}
+library(rajiveplus)
+library(ggplot2)
+```
+
+---
+
+## Shared Simulated Data
+
+```{r gallery-compute, eval = run_heavy}
+# ===== Run once (run_heavy = TRUE) to generate the gallery cache =====
+set.seed(42)
+n   <- 80L
+pks <- c(60L, 50L, 40L)
+
+sim      <- ajive.data.sim(K = 3, rankJ = 2, rankA = c(5L, 4L, 4L),
+                           n = n, pks = pks, dist.type = 1)
+blocks   <- sim$sim_data
+names(blocks) <- c("mRNA", "Methylation", "Proteomics")
+for (k in seq_along(blocks))
+  rownames(blocks[[k]]) <- paste0("sample", seq_len(n))
+
+meta_df <- data.frame(
+  group      = rep(c("A", "B"), each = n / 2L),
+  score_cont = rnorm(n),
+  time_event = abs(rnorm(n, mean = 5, sd = 2)),
+  event_flag = rbinom(n, 1L, 0.6),
+  row.names  = paste0("sample", seq_len(n)),
+  stringsAsFactors = FALSE
+)
+
+fit <- Rajive(
+  blocks               = blocks,
+  initial_signal_ranks = c(5L, 4L, 4L),
+  n_wedin_samples      = 200L,
+  n_rand_dir_samples   = 200L
+)
+
+set.seed(42)
+js <- jackstraw_rajive(fit, blocks, n_null = 5L, correction = "BH")
+
+assoc_cat  <- associate_components(fit, meta_df, variable = "group",
+                                   mode = "categorical")
+assoc_cont <- associate_components(fit, meta_df, variable = "score_cont",
+                                   mode = "continuous")
+
+stab_rank <- assess_stability(fit, blocks, c(5L, 4L, 4L),
+                              target = "joint_rank", B = 5L)
+stab_load <- assess_stability(fit, blocks, c(5L, 4L, 4L),
+                              target = "loadings",   B = 5L)
+stab_comp <- assess_stability(fit, blocks, c(5L, 4L, 4L),
+                              target = "components", B = 5L)
+
+dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
+saveRDS(
+  list(blocks = blocks, meta = meta_df, fit = fit, js = js,
+       assoc_cat = assoc_cat, assoc_cont = assoc_cont,
+       stab_rank = stab_rank, stab_load = stab_load, stab_comp = stab_comp),
+  file = file.path(data_dir, "gallery_precomp.rds")
+)
+```
+
+```{r gallery-load}
+# ===== Load cached results (always runs) =====
+cache      <- readRDS(file.path(data_dir, "gallery_precomp.rds"))
+blocks     <- cache$blocks
+meta_df    <- cache$meta
+fit        <- cache$fit
+js         <- cache$js
+assoc_cat  <- cache$assoc_cat
+assoc_cont <- cache$assoc_cont
+stab_rank  <- cache$stab_rank
+stab_load  <- cache$stab_load
+stab_comp  <- cache$stab_comp
+```
+
+---
+
+# 1  Data Simulation
+
+## `ajive.data.sim()`
+
+Generates synthetic multi-block data with known joint and individual ranks.
+Essential for testing and benchmarking: ground-truth decomposition structure
+is accessible.
+
+```{r sim-ajive-data-sim}
+set.seed(7)
+sim2 <- ajive.data.sim(
+  K         = 2,
+  rankJ     = 2,
+  rankA     = c(4, 3),
+  n         = 60,
+  pks       = c(80, 60),
+  dist.type = 1,
+  noise     = 1
+)
+cat("True joint rank:      ", sim2$rankJ_true, "\n")
+cat("True individual ranks:", sim2$rankA_true, "\n")
+cat("Block 1 dimensions:   ", dim(sim2$sim_data[[1]]), "\n")
+```
+
+**Interpretation.** `sim_data` is a list of K matrices (samples x features).
+`rankJ_true` and `rankA_true` record the planted ground-truth ranks for
+benchmarking recovery performance.
+
+---
+
+# 2  Core Decomposition
+
+## `Rajive()`
+
+The main function. Decomposes each block into **joint** (shared), **individual**
+(block-specific), and **noise** components using robust angle-based JIVE.
+
+```{r core-rajive, eval = FALSE}
+fit_demo <- Rajive(
+  blocks               = blocks,
+  initial_signal_ranks = c(5L, 4L, 4L),
+  full                 = TRUE,
+  n_wedin_samples      = 200L,
+  n_rand_dir_samples   = 200L,
+  joint_rank           = NA,
+  num_cores            = 1L
+)
+```
+
+**Interpretation.** Returns a `rajive` S3 object. Set `joint_rank = NA` for
+automatic rank estimation. Increase `n_wedin_samples` for a more precise Wedin
+bound. The `initial_signal_ranks` vector should be set conservatively above the
+expected rank per block.
+
+---
+
+# 3  S3 Methods — `rajive` class
+
+## `print.rajive()`
+
+```{r s3-print}
+print(fit)
+```
+
+**Interpretation.** Number of blocks, estimated joint rank, and individual rank
+per block. A joint rank of 0 means no shared signal was detected.
+
+---
+
+## `summary.rajive()`
+
+```{r s3-summary}
+summary(fit)
+```
+
+**Interpretation.** Returns a tidy `data.frame` with one row per block showing
+`joint_rank` and `individual_rank`. Use for inspection before extraction.
+
+---
+
+# 4  Rank Accessors
+
+## `get_joint_rank()`
+
+```{r rank-joint}
+jrank <- get_joint_rank(fit)
+cat("Estimated joint rank:", jrank, "\n")
+```
+
+---
+
+## `get_individual_rank()`
+
+```{r rank-indiv}
+for (k in seq_along(blocks))
+  cat(sprintf("Block %d (%s) individual rank: %d\n",
+              k, names(blocks)[k], get_individual_rank(fit, k)))
+```
+
+---
+
+## `get_all_ranks()`
+
+```{r rank-all}
+rank_tbl <- get_all_ranks(fit)
+knitr::kable(rank_tbl, caption = "All block ranks")
+```
+
+**Interpretation.** Combines `get_joint_rank()` and per-block
+`get_individual_rank()` into one data frame for reporting.
+
+---
+
+# 5  Component Extractors
+
+## `get_joint_scores()`
+
+```{r extract-joint-scores}
+J_scores <- get_joint_scores(fit)
+cat("Dimensions (samples x joint components):", dim(J_scores), "\n")
+print(round(head(J_scores, 4), 3))
+```
+
+**Interpretation.** Each column is one joint factor; each row is one sample.
+These are estimated quantities — downstream p-values do not account for score
+estimation error (treat results as exploratory).
+
+---
+
+## `get_block_scores()`
+
+```{r extract-block-scores}
+bl1_joint  <- get_block_scores(fit, k = 1, type = "joint")
+bl2_indiv  <- get_block_scores(fit, k = 2, type = "individual")
+cat("Block 1 joint scores:", dim(bl1_joint), "\n")
+cat("Block 2 individual scores:", dim(bl2_indiv), "\n")
+```
+
+---
+
+## `get_block_loadings()`
+
+```{r extract-block-loadings}
+bl1_load <- get_block_loadings(fit, k = 1, type = "joint")
+cat("Block 1 joint loadings (features x components):", dim(bl1_load), "\n")
+```
+
+**Interpretation.** High absolute loading → feature strongly associated with
+the component. Use `jackstraw_rajive()` for formal significance rather than raw
+loading magnitude.
+
+---
+
+## `get_block_matrix()`
+
+```{r extract-block-matrix}
+J1 <- get_block_matrix(fit, k = 1, type = "joint")
+I1 <- get_block_matrix(fit, k = 1, type = "individual")
+E1 <- get_block_matrix(fit, k = 1, type = "noise")
+cat("Reconstruction error:", round(max(abs(blocks[[1]] - J1 - I1 - E1)), 6), "\n")
+```
+
+**Interpretation.** J + I + E ≈ original matrix. The joint matrix captures
+shared cross-block structure; individual captures block-unique signal; noise is
+the remainder.
+
+---
+
+# 6  Diagnostic Extraction
+
+## `extract_components()` — `what = "rank_diagnostics"` (wide)
+
+```{r diag-wide}
+diag_wide <- extract_components(fit, what = "rank_diagnostics", format = "wide")
+cat("Cutoff rule:", diag_wide$cutoff_rule, "\n")
+cat("Wedin threshold:", round(diag_wide$wedin_cutoff, 4), "\n")
+cat("Rand-dir threshold:", round(diag_wide$rand_cutoff, 4), "\n")
+cat("Joint rank estimate:", diag_wide$joint_rank_estimate, "\n")
+```
+
+**Interpretation.** Overall threshold = `max(wedin_cutoff, rand_cutoff)` —
+a practical heuristic, not a formal FWER/FDR guarantee.
+
+---
+
+## `extract_components()` — `what = "rank_diagnostics"` (long)
+
+```{r diag-long}
+diag_long <- extract_components(fit, what = "rank_diagnostics", format = "long")
+knitr::kable(head(diag_long, 6),
+             caption = "Rank diagnostics — long format (first 6 SVs)")
+```
+
+---
+
+## `extract_components()` — `what = "scores"`
+
+```{r diag-scores}
+scores_long <- extract_components(fit, what = "scores", type = "joint",
+                                  format = "long")
+cat("Columns:", names(scores_long), "\n")
+head(scores_long, 4)
+```
+
+---
+
+## `extract_components()` — `what = "loadings"`
+
+```{r diag-loadings}
+load_long <- extract_components(fit, what = "loadings", type = "joint",
+                                block = 1L, format = "long")
+cat("Loadings dimensions:", dim(load_long), "\n")
+head(load_long, 4)
+```
+
+---
+
+## `extract_components()` — `what = "variance"`
+
+```{r diag-variance}
+var_df <- extract_components(fit, blocks = blocks, what = "variance")
+knitr::kable(round(var_df, 3), caption = "Variance explained per block (%)")
+```
+
+---
+
+# 7  Decomposition Visualization
+
+## `data_heatmap()` — requires *reshape2*
+
+```{r viz-data-heatmap, fig.height = 3}
+if (requireNamespace("reshape2", quietly = TRUE)) {
+  data_heatmap(
+    data  = t(blocks[[1]][, 1:20]),
+    title = "Block 1 (mRNA): first 20 features",
+    xlab  = "Samples",
+    ylab  = "Features"
+  )
+}
+```
+
+**Interpretation.** Color gradients reveal overall variation patterns.
+Distinct bands across samples suggest latent structure.
+
+---
+
+## `decomposition_heatmaps_robustH()` — requires *cowplot* + *reshape2*
+
+```{r viz-decomp-heatmaps, fig.height = 6}
+if (requireNamespace("cowplot", quietly = TRUE) &&
+    requireNamespace("reshape2", quietly = TRUE)) {
+  decomposition_heatmaps_robustH(blocks = blocks, jive_results_robust = fit)
+}
+```
+
+**Interpretation.** Four panels (original, joint, individual, noise). The joint
+row should look structurally similar across all blocks; the noise row should
+resemble random variation.
+
+---
+
+# 8  Variance Explained
+
+## `showVarExplained_robust()`
+
+```{r var-show}
+var_list <- showVarExplained_robust(fit, blocks)
+cat("Joint:     ", round(unlist(var_list$Joint), 3), "\n")
+cat("Individual:", round(unlist(var_list$Indiv), 3), "\n")
+cat("Residual:  ", round(unlist(var_list$Resid), 3), "\n")
+```
+
+---
+
+## `plot_variance_explained()`
+
+```{r var-plot, fig.height = 4}
+plot_variance_explained(fit, blocks)
+```
+
+**Interpretation.** Stacked bars show joint (blue), individual (light blue),
+and residual (red) proportions per block. Blocks with high joint proportion
+are strongly integrated with the shared signal.
+
+---
+
+# 9  Score Plots
+
+## `plot_scores()`
+
+```{r scores-plot-scores, fig.height = 4}
+plot_scores(fit, k = 1, type = "joint", comp_x = 1, comp_y = 2,
+            group = meta_df$group)
+```
+
+**Interpretation.** Separation of groups along an axis indicates the component
+captures variation correlated with that grouping variable.
+
+---
+
+## `plot_components()` — `"pairs"`
+
+```{r scores-pairs, fig.height = 5}
+plot_components(fit, plot_type = "pairs", type = "joint",
+                group = meta_df$group)
+```
+
+---
+
+## `plot_components()` — `"density"`
+
+```{r scores-density, fig.height = 4}
+plot_components(fit, plot_type = "density", type = "joint",
+                group = meta_df$group)
+```
+
+**Interpretation.** Bimodal densities suggest discrete structure; unimodal
+indicates a continuous gradient.
+
+---
+
+# 10  AJIVE Diagnostic Plots
+
+## `plot_components()` — `"rank_threshold"`
+
+```{r diag-rank-threshold, fig.height = 4}
+plot_components(fit, plot_type = "rank_threshold") +
+  labs(subtitle = "Threshold = max(Wedin, random-direction) — heuristic, not FWER/FDR-controlled")
+```
+
+**Interpretation.** Squared singular values above the dashed line are
+classified as joint. A clear elbow gap indicates stable rank estimation.
+
+---
+
+## `plot_components()` — `"bound_distributions"`
+
+```{r diag-bound-dist, fig.height = 4}
+plot_components(fit, plot_type = "bound_distributions")
+```
+
+**Interpretation.** Histograms of Wedin and random-direction bound samples.
+A narrow distribution indicates a stable threshold.
+
+---
+
+## `plot_components()` — `"ajive_diagnostic"` — requires *patchwork*
+
+```{r diag-ajive-full, fig.height = 7}
+if (requireNamespace("patchwork", quietly = TRUE)) {
+  plot_components(fit, plot_type = "ajive_diagnostic")
+}
+```
+
+**Interpretation.** The composite first-look diagnostic. Review whether joint
+components clearly exceed both cutoffs and whether bounds are well-separated.
+
+---
+
+# 11  Feature Visualization
+
+## `plot_components()` — `"top_features"`
+
+```{r feat-top, fig.height = 4}
+plot_components(fit, plot_type = "top_features", type = "joint",
+                block = 1L, component = 1L, top_n = 20L)
+```
+
+**Interpretation.** Features at the top drive joint variation most strongly.
+Do not treat ranking alone as significance — use `jackstraw_rajive()`.
+
+---
+
+## `plot_components()` — `"component_heatmap"`
+
+```{r feat-heatmap, fig.height = 4}
+plot_components(fit, plot_type = "component_heatmap", type = "joint",
+                block = 1L)
+```
+
+**Interpretation.** Clusters of features with consistent loading patterns
+across components suggest correlated feature modules.
+
+---
+
+# 12  S3 autoplot / fortify — `rajive` class
+
+## `autoplot()`
+
+```{r s3-autoplot, fig.height = 5}
+autoplot(fit)
+```
+
+---
+
+## `fortify()`
+
+```{r s3-fortify}
+tidy_fit <- fortify(fit)
+cat("Columns:", names(tidy_fit), "\n")
+head(tidy_fit, 3)
+```
+
+**Interpretation.** One row per sample per joint component. Suitable for
+direct use in `ggplot2` and `dplyr` without manual reshaping.
+
+---
+
+# 13  Feature Ranking Suite
+
+## `rank_features()` — `"top_loadings"`
+
+```{r rank-top}
+top20 <- rank_features(fit, mode = "top_loadings", type = "joint",
+                       block = 1L, component = 1L, n = 20L, signed = TRUE)
+knitr::kable(head(top20, 10), digits = 4,
+             caption = "Top 10 features — Block 1, Joint Component 1")
+```
+
+**Interpretation.** High absolute loading = strong driver of joint variation in
+this block. Use `jackstraw_rajive()` for formal significance.
+
+---
+
+## `rank_features()` — `"contribution"`
+
+```{r rank-contrib}
+contrib <- rank_features(fit, mode = "contribution", type = "joint",
+                         block = 1L, component = 1L)
+knitr::kable(head(contrib, 8), digits = 4,
+             caption = "Feature contributions (top 8)")
+```
+
+---
+
+## `rank_features()` — `"overlap"`
+
+```{r rank-overlap}
+overlap <- rank_features(fit, mode = "overlap", type = "joint",
+                         component = 1L, n = 50L, method = "jaccard")
+knitr::kable(overlap, digits = 3,
+             caption = "Jaccard overlap of top-50 joint features")
+```
+
+**Interpretation.** Values near 1: same features highly ranked in both blocks.
+Moderate overlap (~0.2-0.4) is typical for real multi-omics data.
+
+---
+
+### Wrappers: `get_top_loadings()`, `get_feature_contributions()`, `compare_feature_sets_across_blocks()`
+
+```{r rank-wrappers}
+top_w     <- get_top_loadings(fit, block = 1L, component = 1L, n = 5L)
+overlap_w <- compare_feature_sets_across_blocks(fit, component = 1L,
+                                                n = 50L, method = "jaccard")
+cat("get_top_loadings — first row:\n"); print(top_w[1, ])
+cat("compare_feature_sets_across_blocks:\n"); print(overlap_w)
+```
+
+---
+
+# 14  Association Testing Suite
+
+## `associate_components()` — `"categorical"`
+
+```{r assoc-cat}
+knitr::kable(assoc_cat, digits = 4,
+             caption = "Joint factor — group association (Kruskal-Wallis)")
+```
+
+> **Exploratory-inference caveat.** P-values are from estimated scores and do
+> not propagate score estimation error. Treat as hypothesis-generating only.
+
+---
+
+## `associate_components()` — `"continuous"`
+
+```{r assoc-cont}
+knitr::kable(assoc_cont, digits = 4,
+             caption = "Joint factor — continuous association (Pearson)")
+```
+
+---
+
+## `associate_components()` — `"survival"` (requires *survival*)
+
+```{r assoc-survival, eval = requireNamespace("survival", quietly = TRUE)}
+assoc_surv <- associate_components(
+  fit, meta_df,
+  mode       = "survival",
+  time_col   = "time_event",
+  status_col = "event_flag",
+  split      = "median"
+)
+knitr::kable(assoc_surv, digits = 4,
+             caption = "Joint factor — survival association (log-rank, median split)")
+```
+
+> **Survival-split note.** The median-split log-rank test is descriptive. For
+> primary inference prefer `split = "none"` (continuous Cox regression).
+
+---
+
+## `plot_components()` — `"association"`
+
+```{r assoc-plot, fig.height = 4}
+assoc_all <- rbind(assoc_cat, assoc_cont)
+plot_components(assoc_results = assoc_all, plot_type = "association")
+```
+
+---
+
+### Wrappers: `associate_scores_continuous()`, `associate_scores_categorical()`
+
+```{r assoc-wrappers}
+cont_w <- associate_scores_continuous(fit, meta_df, variable = "score_cont")
+cat("Same as associate_components(mode='continuous'):\n")
+print(cont_w[1:2, ])
+```
+
+---
+
+# 15  Stability Assessment Suite
+
+## `assess_stability()` — `"joint_rank"`
+
+```{r stab-rank}
+cat("Bootstrap joint rank distribution (B=5):\n")
+print(stab_rank$rank_table)
+cat("Observed rank:", stab_rank$observed_rank, "\n")
+```
+
+**Interpretation.** A concentrated distribution (all resamples returning the
+same rank) indicates high rank stability.
+
+---
+
+## `assess_stability()` — `"loadings"`
+
+```{r stab-loadings}
+for (k in seq_along(stab_load))
+  cat(sprintf("  %s: %s\n", names(stab_load)[k],
+              paste(round(stab_load[[k]]$cos_similarity, 3), collapse = ", ")))
+```
+
+> **Procrustes note.** Bootstrap loadings are aligned via orthogonal Procrustes
+> rotation before comparing cosine similarities. Cosine > 0.9 is typically
+> considered stable.
+
+---
+
+## `assess_stability()` — `"components"`
+
+```{r stab-components}
+knitr::kable(stab_comp, digits = 3,
+             caption = "Bootstrap stability of joint scores (B=5)")
+```
+
+---
+
+## `plot_stability_heatmap()` / `plot_components(plot_type = "stability")`
+
+```{r stab-heatmap, fig.height = 4}
+plot_stability_heatmap(stab_load)
+```
+
+```{r stab-via-plot-components, fig.height = 4}
+plot_components(stability_result = stab_load, plot_type = "stability")
+```
+
+---
+
+### Wrappers: `bootstrap_joint_rank()`, `bootstrap_loading_stability()`
+
+```{r stab-wrappers, eval = FALSE}
+rank_draws <- bootstrap_joint_rank(blocks, c(5L, 4L, 4L), B = 5L)
+load_stab  <- bootstrap_loading_stability(fit, blocks, c(5L, 4L, 4L), B = 5L)
+```
+
+---
+
+# 16  Summarization Suite
+
+## `summarize_components()` — `"components"`
+
+```{r summ-components}
+knitr::kable(summarize_components(fit, summary_type = "components"),
+             caption = "Component catalog")
+```
+
+---
+
+## `summarize_components()` — `"variance"`
+
+```{r summ-variance}
+knitr::kable(
+  summarize_components(fit, blocks = blocks, summary_type = "variance"),
+  digits = 3,
+  caption = "Variance decomposition per block"
+)
+```
+
+---
+
+## `summarize_components()` — `"associations"`
+
+```{r summ-assoc}
+knitr::kable(
+  summarize_components(assoc_results = assoc_all, summary_type = "associations"),
+  digits = 4,
+  caption = "Association summary"
+)
+```
+
+---
+
+## `summarize_components()` — `"diagnostics"`
+
+```{r summ-diagnostics}
+knitr::kable(head(summarize_components(fit, summary_type = "diagnostics"), 6),
+             digits = 4, caption = "Rank diagnostics (first 6 rows)")
+```
+
+---
+
+## `summarize_components()` — `"stability"`
+
+```{r summ-stability}
+knitr::kable(
+  summarize_components(stability_result = stab_rank, summary_type = "stability"),
+  digits = 3, caption = "Bootstrap joint rank distribution"
+)
+```
+
+---
+
+## `summarize_components()` — `"significance"`
+
+```{r summ-significance}
+knitr::kable(
+  summarize_components(jackstraw_result = js, summary_type = "significance"),
+  digits = 4, caption = "Significant features per block x component"
+)
+```
+
+---
+
+# 17  Jackstraw Significance Testing
+
+## `jackstraw_rajive()`
+
+```{r jack-run, eval = FALSE}
+set.seed(42)
+js <- jackstraw_rajive(
+  ajive_output = fit,
+  blocks       = blocks,
+  alpha        = 0.05,
+  n_null       = 5L,       # use >= 100 in practice
+  correction   = "BH"
+)
+```
+
+> **Significance note.** Identifies features *associated with* the estimated
+> joint score — an approximation (decomposition is not re-estimated after
+> feature masking). Do not interpret as causal drivers.
+
+---
+
+## `print.jackstraw_rajive()` / `summary.jackstraw_rajive()`
+
+```{r jack-print-summary}
+print(js)
+summary(js)
+```
+
+---
+
+## `autoplot.jackstraw_rajive()` / `fortify.jackstraw_rajive()`
+
+```{r jack-autoplot, fig.height = 4}
+autoplot(js)
+```
+
+```{r jack-fortify}
+tidy_js <- fortify(js)
+cat("Columns:", names(tidy_js), "\n")
+head(tidy_js, 4)
+```
+
+---
+
+## `plot_jackstraw()` — `"pvalue_hist"`
+
+```{r jack-pvhist, fig.height = 4}
+plot_jackstraw(js, type = "pvalue_hist", block = 1L, component = 1L)
+```
+
+**Interpretation.** A spike near 0 followed by a near-uniform distribution
+indicates well-calibrated test with true signal. Fully uniform = no significant
+features.
+
+---
+
+## `plot_jackstraw()` — `"scatter"`
+
+```{r jack-scatter, fig.height = 4}
+plot_jackstraw(js, type = "scatter", block = 1L, component = 1L,
+               label_top = 5L)
+```
+
+---
+
+## `plot_jackstraw()` — `"loadings_significance"`
+
+```{r jack-load-sig, fig.height = 4}
+plot_jackstraw(js, type = "loadings_significance", block = 1L)
+```
+
+---
+
+## `plot_components()` — `"volcano"` / `"jackstraw_summary"`
+
+```{r jack-volcano, fig.height = 4}
+plot_components(jackstraw_result = js, plot_type = "volcano",
+                block = 1L, component = 1L)
+```
+
+```{r jack-summary-plot, fig.height = 4}
+plot_components(jackstraw_result = js, plot_type = "jackstraw_summary")
+```
+
+---
+
+## `get_significant_vars()` / `summarize_significant_vars()`
+
+```{r jack-sig-vars}
+sig_b1c1 <- get_significant_vars(js, block = 1L, component = 1L)
+cat("Significant features (block 1, component 1):", nrow(sig_b1c1), "\n")
+if (nrow(sig_b1c1) > 0)
+  knitr::kable(head(sig_b1c1, 8), digits = 4)
+```
+
+```{r jack-rank-sig}
+sig_all <- summarize_significant_vars(js)
+knitr::kable(head(sig_all, 8), digits = 4,
+             caption = "All significant features (all blocks x components)")
+```
+
+---
+
+# 18  Reporting and Export
+
+## `export_results()` — `"csv"` / `"rds"`
+
+```{r export-csv}
+top_feats <- rank_features(fit, mode = "top_loadings", type = "joint",
+                           block = 1L, component = 1L, n = 20L)
+tmp_csv <- tempfile(fileext = ".csv")
+export_results(top_feats, path = tmp_csv, format = "csv")
+rt <- read.csv(tmp_csv)
+cat("Round-trip rows/cols:", nrow(rt), "/", ncol(rt), "\n")
+```
+
+```{r export-rds}
+tmp_rds <- tempfile(fileext = ".rds")
+export_results(fit, path = tmp_rds, format = "rds")
+fit2 <- readRDS(tmp_rds)
+cat("Reloaded joint rank:", get_joint_rank(fit2), "\n")
+```
+
+---
+
+## `rajive_report()`
+
+```{r report-rajive}
+tmp_html <- tempfile(fileext = ".html")
+rajive_report(
+  ajive_output     = fit,
+  blocks           = blocks,
+  metadata         = meta_df,
+  jackstraw_result = js,
+  output_file      = tmp_html,
+  sections         = c("overview", "variance", "features",
+                       "associations", "stability")
+)
+cat("Report written to:", tmp_html, "\n")
+cat("File size (bytes):", file.info(tmp_html)$size, "\n")
+```
+
+**Interpretation.** A self-contained HTML starting-point deliverable. For
+publication-quality outputs, use the specialized functions demonstrated above.
+
+---
+
+# 19  Appendix — Wrapper Quick Reference
+
+| Wrapper | Equivalent underlying call |
+|---|---|
+| `get_top_loadings(fit, block=1, component=1)` | `rank_features(fit, mode="top_loadings", block=1, component=1)` |
+| `get_feature_contributions(fit, block=1)` | `rank_features(fit, mode="contribution", block=1)` |
+| `compare_feature_sets_across_blocks(fit, n=50)` | `rank_features(fit, mode="overlap", n=50)` |
+| `summarize_significant_vars(js)` | `rank_features(jackstraw_result=js, mode="significant")` |
+| `associate_scores_continuous(fit, meta, variable="x")` | `associate_components(fit, meta, variable="x", mode="continuous")` |
+| `associate_scores_categorical(fit, meta, variable="g")` | `associate_components(fit, meta, variable="g", mode="categorical")` |
+| `associate_scores_survival(fit, meta, time_col="t", status_col="e")` | `associate_components(fit, meta, mode="survival", time_col="t", status_col="e")` |
+| `bootstrap_joint_rank(blocks, ranks, B=5)` | `assess_stability(blocks=blocks, initial_signal_ranks=ranks, target="joint_rank", B=5)` |
+| `bootstrap_loading_stability(fit, blocks, ranks, B=5)` | `assess_stability(fit, blocks, ranks, target="loadings", B=5)` |
+| `plot_stability_heatmap(stab_load)` | `plot_components(stability_result=stab_load, plot_type="stability")` |
+
+---
+
+## Session Info
+
+```{r session-info}
+sessionInfo()
+```

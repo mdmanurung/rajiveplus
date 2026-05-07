@@ -492,3 +492,230 @@ test_that("G3: assess_stability(loadings) returns aligned loading summaries", {
   expect_true(all(c("mean_loading", "sd_loading", "cos_similarity") %in% names(stab[[1L]])))
   expect_true(is.numeric(stab[[1L]]$cos_similarity))
 })
+
+
+# ---------------------------------------------------------------------------
+# I. summarize_components — summary table tests
+# ---------------------------------------------------------------------------
+
+test_that("I1: summarize_components('components') returns expected schema", {
+  out <- summarize_components(ajive_output = .viz_fit, summary_type = "components")
+  expect_true(is.data.frame(out))
+  expect_true(all(c("block", "type", "component", "block_rank",
+                    "joint_rank", "n_features") %in% names(out)))
+  expect_true(all(out$type %in% c("joint", "individual")))
+})
+
+test_that("I2: summarize_components('diagnostics') mirrors extract long diagnostics", {
+  out <- summarize_components(ajive_output = .viz_fit, summary_type = "diagnostics")
+  expect_true(is.data.frame(out))
+  expect_true(all(c("component_index", "obs_sval", "classification") %in% names(out)))
+})
+
+test_that("I3: summarize_components('significance') returns per block-component aggregates", {
+  out <- summarize_components(jackstraw_result = .viz_jsr, summary_type = "significance")
+  expect_true(is.data.frame(out))
+  expect_true(all(c("block", "component", "n_features",
+                    "n_significant", "prop_significant") %in% names(out)))
+  expect_true(all(out$prop_significant >= 0 & out$prop_significant <= 1))
+})
+
+test_that("I4: summarize_components('associations') aggregates variable-component rows", {
+  n <- nrow(.viz_fit$joint_scores)
+  meta <- data.frame(
+    x = rnorm(n),
+    y = sample(c("A", "B"), n, replace = TRUE),
+    stringsAsFactors = FALSE
+  )
+  assoc <- suppressMessages(
+    associate_components(.viz_fit, meta, variables = c("x", "y"), mode = "categorical")
+  )
+
+  out <- summarize_components(assoc_results = assoc, summary_type = "associations")
+  expect_true(is.data.frame(out))
+  expect_true(all(c("variable", "component", "n_tests", "min_p_value", "min_p_adj") %in% names(out)))
+})
+
+test_that("I5: summarize_components('stability') handles rank-table output", {
+  stab <- assess_stability(
+    ajive_output = .viz_fit,
+    blocks = ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                            n = 40L, pks = c(30L, 20L),
+                            dist.type = 1)$sim_data,
+    initial_signal_ranks = c(4L, 3L),
+    target = "joint_rank",
+    B = 3L,
+    sample_frac = 0.8
+  )
+
+  out <- summarize_components(stability_result = stab, summary_type = "stability")
+  expect_true(is.data.frame(out))
+  expect_true(all(c("joint_rank", "frequency", "proportion") %in% names(out)))
+})
+
+test_that("I6: summarize_components validates required inputs", {
+  expect_error(
+    summarize_components(summary_type = "components"),
+    regexp = "ajive_output"
+  )
+  expect_error(
+    summarize_components(summary_type = "significance"),
+    regexp = "jackstraw_result"
+  )
+  expect_error(
+    summarize_components(summary_type = "associations"),
+    regexp = "assoc_results"
+  )
+})
+
+# ---------------------------------------------------------------------------
+# J. Remaining non-benchmark modules
+# ---------------------------------------------------------------------------
+
+test_that("J1: extract_components supports scores/loadings/significance/variance", {
+  Y <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = 40L, pks = c(30L, 20L), dist.type = 1)
+  fit <- .viz_fit
+
+  s_long <- extract_components(fit, what = "scores", format = "long")
+  l_long <- extract_components(fit, what = "loadings", format = "long")
+  v_tbl  <- extract_components(fit, blocks = Y$sim_data, what = "variance")
+  sig    <- extract_components(what = "significance", source = "jackstraw",
+                               jackstraw_result = .viz_jsr)
+
+  expect_true(all(c("score", "component") %in% names(s_long)))
+  expect_true(all(c("loading", "feature") %in% names(l_long)))
+  expect_true(is.data.frame(v_tbl))
+  expect_true(all(c("p_value", "significant") %in% names(sig)))
+})
+
+test_that("J2: plot_components supports non-diagnostic plot types", {
+  Y <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = 40L, pks = c(30L, 20L), dist.type = 1)
+  assoc <- suppressMessages(
+    associate_components(.viz_fit,
+                         data.frame(g = sample(c("A", "B"), 40L, TRUE), stringsAsFactors = FALSE),
+                         variable = "g", mode = "categorical")
+  )
+  stab <- assess_stability(ajive_output = .viz_fit,
+                           blocks = Y$sim_data,
+                           initial_signal_ranks = c(4L, 3L),
+                           target = "joint_rank",
+                           B = 3L)
+
+  expect_true(inherits(plot_components(.viz_fit, plot_type = "pairs"), "ggplot"))
+  expect_true(inherits(plot_components(.viz_fit, plot_type = "density"), "ggplot"))
+  expect_true(inherits(plot_components(.viz_fit, plot_type = "top_features"), "ggplot"))
+  expect_true(inherits(plot_components(.viz_fit, plot_type = "component_heatmap"), "ggplot"))
+  expect_true(inherits(plot_components(.viz_fit, blocks = Y$sim_data, plot_type = "variance"), "ggplot"))
+  expect_true(inherits(plot_components(assoc_results = assoc, plot_type = "association"), "ggplot"))
+  expect_true(inherits(plot_components(jackstraw_result = .viz_jsr, plot_type = "volcano"), "ggplot"))
+  expect_true(inherits(plot_components(jackstraw_result = .viz_jsr, plot_type = "jackstraw_summary"), "ggplot"))
+  expect_true(inherits(plot_components(stability_result = stab, plot_type = "stability"), "ggplot"))
+})
+
+test_that("J3: export_results writes files", {
+  td <- tempdir()
+  p1 <- file.path(td, "exp_results.csv")
+  p2 <- file.path(td, "exp_results.rds")
+  p3 <- file.path(td, "exp_results.md")
+
+  export_results(data.frame(a = 1:3), p1, format = "csv")
+  export_results(list(a = 1), p2, format = "rds")
+  export_results(data.frame(a = 1:3), p3, format = "md")
+
+  expect_true(file.exists(p1))
+  expect_true(file.exists(p2))
+  expect_true(file.exists(p3))
+})
+
+test_that("J4: rajive_report writes output file", {
+  Y <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = 40L, pks = c(30L, 20L), dist.type = 1)
+  out <- file.path(tempdir(), "rajive_report_test.md")
+  rajive_report(.viz_fit, Y$sim_data, output_file = out,
+                sections = c("overview", "variance", "features"))
+  expect_true(file.exists(out))
+})
+
+test_that("J5: alias wrappers run and return expected object types", {
+  meta <- data.frame(x = rnorm(40L), g = sample(c("A", "B"), 40L, TRUE),
+                     time = rexp(40L), status = sample(0:1, 40L, TRUE),
+                     stringsAsFactors = FALSE)
+  Y <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = 40L, pks = c(30L, 20L), dist.type = 1)
+
+  ac <- suppressMessages(associate_scores_continuous(.viz_fit, meta, variable = "x"))
+  ag <- suppressMessages(associate_scores_categorical(.viz_fit, meta, variable = "g"))
+  as <- suppressMessages(associate_scores_survival(.viz_fit, meta,
+                                                   time_col = "time", status_col = "status"))
+  bj <- bootstrap_joint_rank(.viz_fit, Y$sim_data, c(4L, 3L), B = 3L)
+  bl <- bootstrap_loading_stability(.viz_fit, Y$sim_data, c(4L, 3L), B = 3L)
+
+  expect_true(is.data.frame(ac))
+  expect_true(is.data.frame(ag))
+  expect_true(is.data.frame(as))
+  expect_true(is.list(bj))
+  expect_true(is.list(bl))
+})
+
+test_that("J6: assess_stability target='components' returns summary table", {
+  Y <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = 40L, pks = c(30L, 20L), dist.type = 1)
+  out <- assess_stability(ajive_output = .viz_fit,
+                          blocks = Y$sim_data,
+                          initial_signal_ranks = c(4L, 3L),
+                          target = "components",
+                          B = 3L)
+  expect_true(is.data.frame(out))
+  expect_true(all(c("component", "mean_correlation", "sd_correlation") %in% names(out)))
+})
+
+# ---------------------------------------------------------------------------
+# K. autoplot / fortify S3 methods
+# ---------------------------------------------------------------------------
+
+test_that("K1: autoplot.rajive returns ggplot for pairs/density/top_features", {
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "pairs"),        "ggplot"))
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "density"),      "ggplot"))
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "top_features"), "ggplot"))
+})
+
+test_that("K2: autoplot.rajive supports diagnostic plot_types", {
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "rank_threshold"),      "ggplot"))
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "bound_distributions"), "ggplot"))
+  expect_true(inherits(ggplot2::autoplot(.viz_fit, plot_type = "ajive_diagnostic"),    "gg"))
+})
+
+test_that("K3: autoplot.jackstraw_rajive returns ggplot for jackstraw_summary", {
+  expect_true(inherits(ggplot2::autoplot(.viz_jsr, plot_type = "jackstraw_summary"), "ggplot"))
+})
+
+test_that("K4: autoplot.jackstraw_rajive returns ggplot for volcano", {
+  expect_true(inherits(ggplot2::autoplot(.viz_jsr, plot_type = "volcano",
+                                         block = 1L, component = 1L), "ggplot"))
+})
+
+test_that("K5: fortify.rajive returns long data.frame with score column", {
+  df <- ggplot2::fortify(.viz_fit, what = "scores")
+  expect_true(is.data.frame(df))
+  expect_true("score" %in% names(df))
+  expect_true("component" %in% names(df))
+})
+
+test_that("K6: fortify.rajive supports loadings", {
+  df <- ggplot2::fortify(.viz_fit, what = "loadings")
+  expect_true(is.data.frame(df))
+  expect_true("loading" %in% names(df))
+})
+
+test_that("K7: fortify.jackstraw_rajive returns significance data.frame", {
+  df <- ggplot2::fortify(.viz_jsr)
+  expect_true(is.data.frame(df))
+  expect_true(all(c("p_value", "significant") %in% names(df)))
+})
+
+test_that("K8: autoplot errors informatively for wrong object class", {
+  expect_error(autoplot.rajive(list()), regexp = "class")
+})
+

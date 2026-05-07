@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(./logs/phase2_checkpoint.sh)",
-      "Bash(conda run *)"
-    ]
-  }
-}

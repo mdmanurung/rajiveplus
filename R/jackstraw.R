@@ -366,6 +366,16 @@ jackstraw_rajive <- function(ajive_output, blocks,
 #'
 #' @return \code{x} invisibly.
 #'
+#' @examples
+#' \donttest{
+#' n   <- 40; pks <- c(30, 20)
+#' Y   <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+#'                       n = n, pks = pks, dist.type = 1)
+#' fit <- Rajive(Y$sim_data, c(4, 3))
+#' js  <- jackstraw_rajive(fit, blocks = Y$sim_data, B = 10L)
+#' print(js)
+#' }
+#'
 #' @export
 print.jackstraw_rajive <- function(x, ...) {
   alpha      <- attr(x, "alpha")
@@ -404,6 +414,16 @@ print.jackstraw_rajive <- function(x, ...) {
 #'
 #' @return A \code{data.frame} with columns \code{block}, \code{component},
 #'   \code{n_features}, \code{n_significant}, and \code{alpha}.
+#'
+#' @examples
+#' \donttest{
+#' n   <- 40; pks <- c(30, 20)
+#' Y   <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+#'                       n = n, pks = pks, dist.type = 1)
+#' fit <- Rajive(Y$sim_data, c(4, 3))
+#' js  <- jackstraw_rajive(fit, blocks = Y$sim_data, B = 10L)
+#' summary(js)
+#' }
 #'
 #' @export
 summary.jackstraw_rajive <- function(object, ...) {

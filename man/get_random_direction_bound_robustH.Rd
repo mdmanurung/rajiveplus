@@ -2,7 +2,7 @@
 % Please edit documentation in R/Rajive_helpfunctions.R
 \name{get_random_direction_bound_robustH}
 \alias{get_random_direction_bound_robustH}
-\title{Estimate the wedin bound for a data matrix.}
+\title{Estimate the random direction bound for data matrices.}
 \usage{
 get_random_direction_bound_robustH(
   n_obs,
@@ -14,13 +14,18 @@ get_random_direction_bound_robustH(
 \arguments{
 \item{n_obs}{The number of observations.}
 
-\item{dims}{The number of features in each data matrix}
+\item{dims}{The number of features in each data matrix.}
 
 \item{num_samples}{Integer. Number of vectors selected for resampling procedure.}
+
+\item{num_cores}{Integer. Number of parallel cores to use (default 2).}
 }
 \value{
-rand_dir_samples
+A numeric vector of length \code{num_samples} containing the
+  random-direction bound samples.
 }
 \description{
-Samples from the random direction bound. Returns on the scale of squared singular value.
+Samples from the random direction distribution by generating Gaussian random
+matrices and computing the leading squared singular value of the concatenated
+subspace matrix.  Returns samples on the scale of squared singular values.
 }

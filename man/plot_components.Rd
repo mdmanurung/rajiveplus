@@ -2,21 +2,74 @@
 % Please edit documentation in R/visualization.R
 \name{plot_components}
 \alias{plot_components}
+\alias{plot_stability_heatmap}
 \title{Plot AJIVE diagnostic visualizations}
 \usage{
 plot_components(
   ajive_output = NULL,
-  plot_type = c("ajive_diagnostic", "rank_threshold", "bound_distributions"),
+  blocks = NULL,
+  jackstraw_result = NULL,
+  assoc_results = NULL,
+  stability_result = NULL,
+  plot_type = c("pairs", "density", "top_features", "component_heatmap", "variance",
+    "association", "volcano", "jackstraw_summary", "stability", "ajive_diagnostic",
+    "rank_threshold", "bound_distributions"),
+  type = c("joint", "individual", "both"),
+  block = NULL,
+  component = NULL,
+  group = NULL,
+  style = NULL,
+  top_n = 20L,
   ...
 )
+
+plot_stability_heatmap(stability_result, style = "heatmap", ...)
 }
 \arguments{
 \item{ajive_output}{An object of class \code{"rajive"} (output of
 \code{\link{Rajive}}), or \code{NULL} when a precomputed diagnostics
 payload is supplied via \code{diagnostics}.}
 
+\item{blocks}{List of original block matrices. Used by score/loading plot
+types that require the raw data; ignored for diagnostic plots.}
+
+\item{jackstraw_result}{An optional object of class
+\code{"jackstraw_rajive"} (output of \code{\link{jackstraw_rajive}}).
+When supplied, significance overlays are added to supported plot types.}
+
+\item{assoc_results}{Optional output of \code{\link{associate_components}}.
+When supplied, association plots use precomputed results instead of
+re-computing them.}
+
+\item{stability_result}{Optional output of \code{\link{assess_stability}}.
+Required for \code{plot_type = "stability"}.}
+
 \item{plot_type}{Character.  One of \code{"ajive_diagnostic"},
-\code{"rank_threshold"}, or \code{"bound_distributions"}.}
+\code{"rank_threshold"}, \code{"bound_distributions"},
+\code{"pairs"}, \code{"density"}, \code{"top_features"},
+\code{"component_heatmap"}, \code{"variance"}, \code{"association"},
+\code{"volcano"}, \code{"jackstraw_summary"}, or \code{"stability"}.}
+
+\item{type}{Character. One of \code{"joint"} (default),
+\code{"individual"}, or \code{"both"}.  Selects which decomposition
+component type to plot.}
+
+\item{block}{Integer or character. Block identifier (name or 1-based
+index) to restrict the plot to a single data block.  \code{NULL}
+(default) plots all blocks where applicable.}
+
+\item{component}{Integer. Component index to plot.  \code{NULL} (default)
+plots all components where applicable.}
+
+\item{group}{Optional grouping vector (length equal to the number of
+samples) or a column name in metadata used to colour points.}
+
+\item{style}{Optional named list of styling overrides (e.g.,
+\code{list(point_size = 1.5, alpha = 0.6)}) passed through to the
+underlying plot helpers.}
+
+\item{top_n}{Integer. Number of top features to display in feature-ranking
+plot types (default \code{20L}).}
 
 \item{...}{Additional arguments passed to the plot helpers:
 \describe{
@@ -41,7 +94,7 @@ plot types are supported:
   \item{\code{"rank_threshold"}}{Squared observed singular values with
     Wedin and/or random-direction cutoff lines, colored by joint/nonjoint
     classification.  The active threshold is the
-    \code{max(wedin, random_direction)} rule — a practical heuristic that
+    \code{max(wedin, random_direction)} rule -- a practical heuristic that
     is conservative in practice but does not carry formal FWER or FDR
     control for rank selection (see \code{StatisticalAudits.md}, Finding 6).}
   \item{\code{"bound_distributions"}}{Histogram(s) of Wedin and/or

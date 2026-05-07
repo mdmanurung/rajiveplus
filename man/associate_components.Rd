@@ -2,6 +2,9 @@
 % Please edit documentation in R/visualization.R
 \name{associate_components}
 \alias{associate_components}
+\alias{associate_scores_continuous}
+\alias{associate_scores_categorical}
+\alias{associate_scores_survival}
 \title{Associate AJIVE component scores with sample metadata}
 \usage{
 associate_components(
@@ -20,6 +23,38 @@ associate_components(
   block = NULL,
   component = NULL,
   ...
+)
+
+associate_scores_continuous(
+  ajive_output,
+  metadata,
+  variable,
+  type = c("joint", "individual"),
+  block = NULL,
+  component = NULL,
+  adjust = "BH"
+)
+
+associate_scores_categorical(
+  ajive_output,
+  metadata,
+  variable,
+  type = c("joint", "individual"),
+  block = NULL,
+  component = NULL,
+  adjust = "BH"
+)
+
+associate_scores_survival(
+  ajive_output,
+  metadata,
+  time_col,
+  status_col,
+  split = c("none", "median", "tertile"),
+  type = c("joint", "individual"),
+  block = NULL,
+  component = NULL,
+  adjust = "BH"
 )
 }
 \arguments{

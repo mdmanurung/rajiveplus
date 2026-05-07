@@ -14,6 +14,8 @@ get_wedin_bound_samples(X, SVD, signal_rank, num_samples = 1000, num_cores = 2)
 \item{signal_rank}{Integer.}
 
 \item{num_samples}{Integer. Number of vectors selected for resampling procedure.}
+
+\item{num_cores}{Integer. Number of parallel cores to use (default 2).}
 }
 \description{
 Gets the wedin bounds

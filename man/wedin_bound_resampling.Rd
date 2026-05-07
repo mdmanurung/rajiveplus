@@ -20,6 +20,8 @@ wedin_bound_resampling(
 \item{right_vectors}{Boolean. Right multiplication or left multiplication.}
 
 \item{num_samples}{Integer. Number of vectors selected for resampling procedure.}
+
+\item{num_cores}{Integer. Number of parallel cores to use (default 2).}
 }
 \description{
 Resampling procedure for the wedin bound

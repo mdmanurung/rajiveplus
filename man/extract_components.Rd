@@ -5,8 +5,14 @@
 \title{Extract components or diagnostics from a Rajive decomposition}
 \usage{
 extract_components(
-  ajive_output,
-  what = "rank_diagnostics",
+  ajive_output = NULL,
+  blocks = NULL,
+  source = c("rajive", "jackstraw"),
+  what = c("scores", "loadings", "variance", "significance", "rank_diagnostics"),
+  type = c("joint", "individual", "both"),
+  block = NULL,
+  component = NULL,
+  jackstraw_result = NULL,
   format = c("wide", "long"),
   include_meta = FALSE,
   ...
@@ -16,8 +22,32 @@ extract_components(
 \item{ajive_output}{An object of class \code{"rajive"} (output of
 \code{\link{Rajive}}).}
 
-\item{what}{Character scalar. What to extract.  Only
-\code{"rank_diagnostics"} is currently implemented.}
+\item{blocks}{List of original block matrices. Reserved for future
+extraction modes; currently unused.}
+
+\item{source}{Character. One of \code{"rajive"} (default) or
+\code{"jackstraw"}.  Selects the result object to extract from.
+\code{"jackstraw"} requires \code{jackstraw_result} to be supplied.}
+
+\item{what}{Character scalar. What to extract.  One of \code{"scores"},
+\code{"loadings"}, \code{"variance"}, \code{"significance"}, or
+\code{"rank_diagnostics"}.  Only \code{"rank_diagnostics"} is currently
+fully implemented.}
+
+\item{type}{Character. One of \code{"joint"} (default),
+\code{"individual"}, or \code{"both"}.  Selects which decomposition
+component type to extract.}
+
+\item{block}{Integer or character. Block identifier (name or 1-based
+index) to restrict extraction to a single block.  \code{NULL} (default)
+returns results for all blocks.}
+
+\item{component}{Integer. Component index to extract.  \code{NULL}
+(default) returns all components.}
+
+\item{jackstraw_result}{An optional object of class
+\code{"jackstraw_rajive"} (output of \code{\link{jackstraw_rajive}}).
+Required when \code{source = "jackstraw"}.}
 
 \item{format}{Character. \code{"wide"} (default) returns a named list of
 class \code{c("rajive_diagnostics", "list")}; \code{"long"} returns a

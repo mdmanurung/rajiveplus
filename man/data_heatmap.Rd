@@ -2,12 +2,13 @@
 % Please edit documentation in R/Rajive_helpfunctions.R
 \name{data_heatmap}
 \alias{data_heatmap}
-\title{Decomposition Heatmaps}
+\title{Decomposition Heatmaps
+Plot data block heatmap}
 \usage{
 data_heatmap(data, show_color_bar = TRUE, title = "", xlab = "", ylab = "")
 }
 \arguments{
-\item{data}{List. The initial data blocks.}
+\item{data}{Matrix or data frame. The data to plot as a heatmap.}
 
 \item{show_color_bar}{Boolean.}
 
@@ -17,6 +18,10 @@ data_heatmap(data, show_color_bar = TRUE, title = "", xlab = "", ylab = "")
 
 \item{ylab}{Character}
 }
+\value{
+A \code{ggplot} object.
+}
 \description{
-Visualization of the RaJIVE decomposition, it shows heatmaps of the decomposition obtained by RaJIVE
+Visualization helper for individual data blocks or decomposition components.
+Produces a raster heatmap using \pkg{ggplot2} with a rainbow colour scale.
 }

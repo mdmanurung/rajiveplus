@@ -2,6 +2,8 @@
 % Please edit documentation in R/visualization.R
 \name{assess_stability}
 \alias{assess_stability}
+\alias{bootstrap_joint_rank}
+\alias{bootstrap_loading_stability}
 \title{Assess stability of AJIVE decomposition via bootstrap resampling}
 \usage{
 assess_stability(
@@ -15,6 +17,24 @@ assess_stability(
   sample_frac = 0.8,
   num_cores = 1L,
   ...
+)
+
+bootstrap_joint_rank(
+  ajive_output = NULL,
+  blocks,
+  initial_signal_ranks,
+  B = 100L,
+  sample_frac = 0.8,
+  num_cores = 1L
+)
+
+bootstrap_loading_stability(
+  ajive_output,
+  blocks,
+  initial_signal_ranks,
+  B = 100L,
+  sample_frac = 0.8,
+  num_cores = 1L
 )
 }
 \arguments{

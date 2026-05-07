@@ -19,3 +19,14 @@ A \code{data.frame} with columns \code{block}, \code{component},
 Returns (and prints) a \code{data.frame} with one row per block/component
 combination.
 }
+\examples{
+\donttest{
+n   <- 40; pks <- c(30, 20)
+Y   <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(4, 3),
+                      n = n, pks = pks, dist.type = 1)
+fit <- Rajive(Y$sim_data, c(4, 3))
+js  <- jackstraw_rajive(fit, blocks = Y$sim_data, B = 10L)
+summary(js)
+}
+
+}
