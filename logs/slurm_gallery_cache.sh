@@ -8,18 +8,28 @@
 #SBATCH --output=logs/slurm_gallery_cache_%j.log
 #SBATCH --error=logs/slurm_gallery_cache_%j.log
 
-cd /exports/para-lipg-hpc/mdmanurung/RaJIVEutils
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
-source /exports/archive/hg-funcgenom-research/mdmanurung/conda/etc/profile.d/conda.sh
-conda activate R4_51
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+
+R_BIN="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R"
+R_SCRIPT="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript"
 
 echo "=== Reinstalling rajiveplus from source ==="
-rm -rf /exports/para-lipg-hpc/mdmanurung/R/4.5/00LOCK-RaJIVEutils
-/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R CMD INSTALL /exports/para-lipg-hpc/mdmanurung/RaJIVEutils
+for i in 1 2 3; do
+  rm -rf /exports/para-lipg-hpc/mdmanurung/R/4.5/00LOCK-RaJIVEutils 2>/dev/null || true
+  "${R_BIN}" CMD INSTALL --no-multiarch --with-keep.source . && break
+  echo "Install attempt $i failed, retrying in 60s..."
+  sleep 60
+done
 echo "=== Install exit code: $? ==="
 
 echo "=== Generating gallery_precomp.rds cache ==="
-/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript - <<'RSCRIPT'
+"${R_SCRIPT}" - <<'RSCRIPT'
 
 library(rajiveplus)
 
@@ -92,7 +102,7 @@ echo "=== Cache generation exit code: $? ==="
 
 # Render vignette with cached data
 echo "=== Rendering function_gallery.Rmd ==="
-/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript \
+"${R_SCRIPT}" \
   -e "rmarkdown::render('vignettes/function_gallery.Rmd', output_dir = 'vignettes')"
 
 echo "=== Render exit code: $? ==="

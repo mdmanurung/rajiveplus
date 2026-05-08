@@ -9,15 +9,35 @@
 #SBATCH --error=logs/slurm_jack2_%j.log
 
 set -euo pipefail
-cd /exports/para-lipg-hpc/mdmanurung/rajiveplus
+
+# Under sbatch, scripts run from a spool copy; use submit directory.
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
+
+# Pin BLAS/OpenMP threads to avoid nested over-subscription.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export BLIS_NUM_THREADS=1
+
+R_BIN="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R"
+R_SCRIPT="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript"
 
 cleanup() {
   perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE  # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd || true
 }
 trap cleanup EXIT
 
+# Install package (retry up to 3 times to handle concurrent lock from bench job).
+for i in 1 2 3; do
+  rm -rf /exports/para-lipg-hpc/mdmanurung/R/4.5/00LOCK-RaJIVEutils 2>/dev/null || true
+  "${R_BIN}" CMD INSTALL --no-multiarch --with-keep.source . && break
+  echo "Install attempt $i failed, retrying in 60s..."
+  sleep 60
+done
+
 perl -0pi -e 's/run_heavy <- FALSE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- TRUE   # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd
 
-/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript -e "rmarkdown::render('vignettes/jackstraw_scaling.Rmd')"
+"${R_SCRIPT}" -e "rmarkdown::render('vignettes/jackstraw_scaling.Rmd')"
 
 echo "EXIT CODE: $?"

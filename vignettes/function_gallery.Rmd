@@ -75,7 +75,7 @@ library(ggplot2)
 
 ```{r gallery-compute, eval = run_heavy}
 # ===== Run once (run_heavy = TRUE) to generate the gallery cache =====
-set.seed(42)
+set.seed(2)
 n   <- 80L
 pks <- c(60L, 50L, 40L)
 
@@ -433,8 +433,14 @@ are strongly integrated with the shared signal.
 ## `plot_scores()`
 
 ```{r scores-plot-scores, fig.height = 4}
-plot_scores(fit, k = 1, type = "joint", comp_x = 1, comp_y = 2,
-            group = meta_df$group)
+jr <- get_joint_rank(fit)
+if (jr >= 2) {
+  plot_scores(fit, k = 1, type = "joint", comp_x = 1, comp_y = 2,
+              group = meta_df$group)
+} else {
+  plot_scores(fit, k = 1, type = "joint", comp_x = 1,
+              group = meta_df$group)
+}
 ```
 
 **Interpretation.** Separation of groups along an axis indicates the component

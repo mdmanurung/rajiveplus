@@ -377,6 +377,17 @@ cowplot::plot_grid(plotlist = heatmap_listR, ncol = K)
 #'
 #' @return A \code{ggplot} object.
 #'
+#' Data heatmap
+#'
+#' Plots a heatmap of a data matrix using ggplot2 and reshape2.
+#'
+#' @param data A numeric matrix.
+#' @param show_color_bar Logical. Show the colour bar legend. Default `TRUE`.
+#' @param title Character. Plot title.
+#' @param xlab Character. x-axis label.
+#' @param ylab Character. y-axis label.
+#' @return A `ggplot` object.
+#' @export
 #' @import ggplot2
 #' @importFrom grDevices rainbow
 
@@ -399,8 +410,8 @@ data_heatmap <- function (data, show_color_bar = TRUE, title = "", xlab = "",
     geom_raster(aes_string(fill = "value"), show.legend = show_color_bar) +
     scale_fill_gradientn(colours = rainbow(10)) +
     theme(panel.background = element_blank(),  axis.line = element_blank(), legend.position = "bottom") +
-    scale_y_continuous(expand = c(0, 0)) +
-    scale_x_continuous(expand = c(0, 0)) + labs(title = title, x = xlab, y = ylab)
+    scale_y_discrete(expand = c(0, 0)) +
+    scale_x_discrete(expand = c(0, 0)) + labs(title = title, x = xlab, y = ylab)
 }
 
 
