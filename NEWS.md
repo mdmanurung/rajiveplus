@@ -10,9 +10,11 @@
   data-driven null distribution that adapts to the actual noise in each block,
   making it particularly useful for heavy-tailed or non-Gaussian data.
   Diagnostic results are stored in `fit$joint_rank_sel$perm` and are
-  surfaced in `extract_components(type = "diagnostics")` and
+  surfaced in `extract_components(what = "rank_diagnostics")` and
   `plot_components(plot_type = "ajive_diagnostic")` (forestgreen histogram
   and hline).
+  **Argument order note:** `n_perm_samples` is positioned after `joint_rank`
+  in the signature, preserving the original positional slot of `joint_rank`.
 
 ## New vignettes
 

@@ -70,33 +70,52 @@ rowVars_fast <- function(M) {
 
 #' Compute empirical p-values from observed and null F-statistics
 #'
-#' For feature \code{i}, the p-value is the proportion of its \code{n_null}
-#' null F-statistics that exceed the observed value.  \code{NA} observed
-#' statistics (constant features) receive p-value = 1.
+#' For feature \code{i}, the p-value is computed using the Phipson--Smyth
+#' (2010) formula \eqn{p_i = (1 + \#\{N_j \ge f_i\}) / (1 + N)}, where the
+#' null pool \eqn{\{N_j\}} is the union of \emph{all} non-missing entries of
+#' \code{f_null} across all features. This pooling is justified by the
+#' jackstraw assumption that, under the null, F-statistics are exchangeable
+#' across features (Chung & Storey 2015) and avoids two failure modes of a
+#' per-feature empirical CDF:
+#' \enumerate{
+#'   \item discreteness when \code{n_null} is small (per-feature p-values
+#'     can only take \code{n_null + 1} distinct values, making BH/Bonferroni
+#'     adjustment uninformative);
+#'   \item p-values exactly equal to zero, which inflate the false-discovery
+#'     rate after multiple-testing adjustment.
+#' }
+#' \code{NA} observed statistics (constant features) receive p-value = 1.
 #'
 #' @param f_obs length-\code{d} numeric vector of observed F-statistics.
 #' @param f_null \code{d x n_null} numeric matrix of null F-statistics.
 #'
-#' @return length-\code{d} numeric vector of empirical p-values in [0, 1].
+#' @return length-\code{d} numeric vector of empirical p-values in (0, 1].
+#'
+#' @references
+#' Phipson B, Smyth GK (2010). Permutation P-values should never be zero:
+#' calculating exact P-values when permutations are randomly drawn.
+#' \emph{Statistical Applications in Genetics and Molecular Biology}, 9(1).
 #'
 #' @keywords internal
 compute_empirical_pvalues <- function(f_obs, f_null) {
-  d      <- length(f_obs)
-  p_vals <- numeric(d)
+  d <- length(f_obs)
 
-  for (i in seq_len(d)) {
-    if (is.na(f_obs[i])) {
-      p_vals[i] <- 1
-    } else {
-      nulls      <- f_null[i, ]
-      nulls      <- nulls[!is.na(nulls)]
-      if (length(nulls) == 0L) {
-        p_vals[i] <- 1
-      } else {
-        p_vals[i] <- mean(f_obs[i] < nulls)
-      }
-    }
-  }
+  pool <- as.numeric(f_null)
+  pool <- pool[is.finite(pool)]
+  N    <- length(pool)
+
+  if (N == 0L) return(rep(1, d))
+
+  sorted_pool <- sort(pool)
+  # findInterval (default left.open=FALSE) returns #{j : sorted_pool[j] <= x}.
+  # For continuous F-statistics, exact ties between f_obs and pool are
+  # vanishingly rare, so #{pool >= x} = N - #{pool <= x}.
+  n_le <- findInterval(f_obs, sorted_pool)
+  n_ge <- N - n_le
+
+  p_vals <- (1 + n_ge) / (1 + N)
+  bad    <- is.na(f_obs) | !is.finite(f_obs)
+  p_vals[bad] <- 1
   p_vals
 }
 

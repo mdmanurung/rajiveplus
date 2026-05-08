@@ -296,3 +296,58 @@ test_that("print.jackstraw_rajive and summary.jackstraw_rajive run without error
   expect_true(all(c("block", "component", "n_features", "n_significant",
                     "alpha", "correction") %in% names(df)))
 })
+
+# ---------------------------------------------------------------------------
+# 11. Phipson--Smyth p-value correctness (regression test for audit fix #1)
+# ---------------------------------------------------------------------------
+
+test_that("compute_empirical_pvalues never returns 0 (Phipson--Smyth)", {
+  set.seed(11)
+  # Observed F-stats far above the null pool: would have given p = 0
+  # under the old formula; with Phipson--Smyth they must be > 0.
+  f_obs  <- c(1e6, 1e6, 1e6)
+  f_null <- matrix(runif(3 * 50, 0, 1), nrow = 3, ncol = 50)
+  p <- rajiveplus:::compute_empirical_pvalues(f_obs, f_null)
+  expect_true(all(p > 0))
+  # Lower bound = 1 / (1 + N_pool) = 1 / 151
+  expect_equal(min(p), 1 / (1 + 3 * 50))
+})
+
+test_that("compute_empirical_pvalues pools nulls across features", {
+  # With a single observed F-stat and all nulls in one feature row,
+  # pooling across rows must use the full pool, not just that row.
+  f_obs  <- 1.5
+  # Place pool values across multiple rows; obs is below the pool max.
+  f_null <- matrix(c(rep(NA_real_, 3), c(1.0, 1.2, 1.4, 1.6, 1.8, 2.0)),
+                   nrow = 3, ncol = 3, byrow = FALSE)
+  # Pool (after dropping NAs) = c(1.0, 1.2, 1.4, 1.6, 1.8, 2.0); N=6.
+  # n_ge(1.5) = #{>= 1.5} = 3 (1.6, 1.8, 2.0). p = (1+3)/(1+6) = 4/7.
+  p <- rajiveplus:::compute_empirical_pvalues(f_obs, f_null)
+  expect_equal(p, 4 / 7)
+})
+
+test_that("jackstraw p-values are approximately uniform under the null", {
+  # Pure-noise blocks: no real association between any feature and joint scores.
+  # Under H0, p-values from a correctly-calibrated jackstraw should be
+  # approximately uniform on (0, 1] (Kolmogorov--Smirnov goodness-of-fit).
+  skip_on_cran()
+  set.seed(123)
+  n  <- 60
+  X1 <- matrix(rnorm(n * 80), n, 80)
+  X2 <- matrix(rnorm(n * 60), n, 60)
+  blocks <- list(X1, X2)
+  ajive_out <- Rajive(blocks, initial_signal_ranks = c(3, 3), joint_rank = 2)
+  js <- jackstraw_rajive(ajive_out, blocks,
+                         alpha = 0.05, n_null = 20, correction = "none")
+
+  all_p <- unlist(lapply(js, function(b)
+    unlist(lapply(b, `[[`, "p_values"), use.names = FALSE)),
+    use.names = FALSE)
+
+  # No exact zeros allowed (Phipson--Smyth lower bound > 0).
+  expect_true(all(all_p > 0))
+
+  # KS test for uniformity: should not reject at the 1% level.
+  ks <- suppressWarnings(stats::ks.test(all_p, "punif"))
+  expect_gt(ks$p.value, 0.01)
+})

@@ -8,6 +8,12 @@
 #' @param n_wedin_samples Integer. Number of wedin bound samples to draw for each data matrix.
 #' @param n_rand_dir_samples Integer. Number of random direction bound samples to draw.
 #' @param joint_rank Integer or NA. User specified joint_rank. If NA will be estimated from data.
+#' @param n_perm_samples Integer or NA. Number of permutation samples for the permutation-based
+#'   joint rank threshold. When provided, replaces the random-direction bound with a permutation
+#'   bound: rows of each block's signal scores are independently shuffled, the leading squared
+#'   singular value of the stacked permuted matrix is recorded, and the 95th percentile is used
+#'   as the threshold. Mutually exclusive with \code{n_rand_dir_samples} (permutation takes
+#'   precedence when both are set). Default \code{NA} (random-direction bound used instead).
 #' @param num_cores Integer. Number of cores to use for parallel computation (block SVD,
 #'   singular value extraction, Wedin bound resampling, and random direction bound sampling).
 #'   Default \code{1L} (serial). Set to a value greater than 1 to enable parallel execution
@@ -42,8 +48,8 @@
 
 Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                            n_wedin_samples=1000, n_rand_dir_samples=1000,
-                           n_perm_samples=NA,
                            joint_rank=NA,
+                           n_perm_samples=NA,
                            num_cores=1L)
 {
 
@@ -82,8 +88,8 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   out <- get_joint_scores_robustH(blocks, block_svd, initial_signal_ranks, sv_thresholds,
                                   n_wedin_samples=n_wedin_samples,
                                   n_rand_dir_samples=n_rand_dir_samples,
-                                  n_perm_samples=n_perm_samples,
                                   joint_rank=joint_rank,
+                                  n_perm_samples=n_perm_samples,
                                   num_cores=num_cores)
   joint_rank_sel_results <- out$rank_sel_results
   joint_scores <- out$joint_scores
@@ -134,6 +140,8 @@ get_sv_threshold <- function(singular_values, rank){
 #' @param n_wedin_samples Integer. Number of wedin bound samples to draw for each data matrix.
 #' @param n_rand_dir_samples Integer. Number of random direction bound samples to draw.
 #' @param joint_rank Integer or NA. User specified joint_rank. If NA will be estimated from data.
+#' @param n_perm_samples Integer or NA. Number of permutation samples for the permutation-based
+#'   joint rank threshold. See \code{\link{Rajive}} for full description.
 #' @param num_cores Integer. Number of cores for parallel resampling.
 #' @importFrom stats quantile
 #'
@@ -142,8 +150,9 @@ get_sv_threshold <- function(singular_values, rank){
 
 get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv_thresholds,
                                      n_wedin_samples=1000, n_rand_dir_samples=1000,
+                                     joint_rank=NA,
                                      n_perm_samples=NA,
-                                     joint_rank=NA, num_cores=2){
+                                     num_cores=2){
 
 
   if(is.na(n_wedin_samples) & is.na(n_rand_dir_samples) & is.na(n_perm_samples) & is.na(joint_rank)){

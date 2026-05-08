@@ -1634,6 +1634,10 @@ assess_stability <- function(ajive_output = NULL,
 #'   For \code{mode = "overlap"}: \code{"jaccard"} (default) or
 #'   \code{"overlap_coef"}.
 #'   Ignored for \code{mode = "significant"}.
+#' @param top_n Optional positive integer.  When supplied to
+#'   \code{summarize_significant_vars}, retains only the top \code{top_n}
+#'   features (by smallest p-value) per block \eqn{\times} component group.
+#'   Ignored by \code{rank_features} itself and other aliases.
 #' @param ... Reserved for future arguments.
 #'
 #' @return A \code{data.frame}.  Column set depends on \code{mode}:

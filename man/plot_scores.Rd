@@ -43,7 +43,7 @@ latent structure captured by the RaJIVE decomposition.
 n <- 50; pks <- c(60, 40)
 Y <- ajive.data.sim(K = 2, rankJ = 3, rankA = c(5, 4), n = n,
                     pks = pks, dist.type = 1)
-res <- Rajive(Y$sim_data, c(5, 4))
+res <- Rajive(Y$sim_data, c(5, 4), joint_rank = 2)
 plot_scores(res, k = 1, type = "joint")
 plot_scores(res, k = 2, type = "individual", comp_x = 1, comp_y = 2)
 }

@@ -13,3 +13,8 @@
 ^vignettes/.*_cache$
 ^vignettes/.*_files$
 ^vignettes/.*\.html$
+^\.claude$
+^\.vscode$
+^vignettes/data/\.gitkeep$
+^AGENTS\.md$
+^test_output\.txt$

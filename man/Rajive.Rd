@@ -10,8 +10,8 @@ Rajive(
   full = TRUE,
   n_wedin_samples = 1000,
   n_rand_dir_samples = 1000,
-  n_perm_samples = NA,
   joint_rank = NA,
+  n_perm_samples = NA,
   num_cores = 1L
 )
 }
@@ -27,6 +27,13 @@ Rajive(
 \item{n_rand_dir_samples}{Integer. Number of random direction bound samples to draw.}
 
 \item{joint_rank}{Integer or NA. User specified joint_rank. If NA will be estimated from data.}
+
+\item{n_perm_samples}{Integer or NA. Number of permutation samples for the permutation-based
+joint rank threshold. When provided, replaces the random-direction bound with a permutation
+bound: rows of each block's signal scores are independently shuffled, the leading squared
+singular value of the stacked permuted matrix is recorded, and the 95th percentile is used
+as the threshold. Mutually exclusive with \code{n_rand_dir_samples} (permutation takes
+precedence when both are set). Default \code{NA} (random-direction bound used instead).}
 
 \item{num_cores}{Integer. Number of cores to use for parallel computation (block SVD,
 singular value extraction, Wedin bound resampling, and random direction bound sampling).

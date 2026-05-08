@@ -11,8 +11,8 @@ get_joint_scores_robustH(
   sv_thresholds,
   n_wedin_samples = 1000,
   n_rand_dir_samples = 1000,
-  n_perm_samples = NA,
   joint_rank = NA,
+  n_perm_samples = NA,
   num_cores = 2
 )
 }
@@ -30,6 +30,9 @@ get_joint_scores_robustH(
 \item{n_rand_dir_samples}{Integer. Number of random direction bound samples to draw.}
 
 \item{joint_rank}{Integer or NA. User specified joint_rank. If NA will be estimated from data.}
+
+\item{n_perm_samples}{Integer or NA. Number of permutation samples for the permutation-based
+joint rank threshold. See \code{\link{Rajive}} for full description.}
 
 \item{num_cores}{Integer. Number of cores for parallel resampling.}
 }
