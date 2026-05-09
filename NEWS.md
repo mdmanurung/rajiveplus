@@ -1,5 +1,24 @@
 # rajiveplus (development)
 
+## Bug fixes
+
+- `RobRSVD_all_cpp()` now zero-initialises the `d`/`u`/`v` accumulators
+  and trims them to the number of components actually fitted before
+  returning.  Previously, on the rare early-break path (when
+  `arma::svd_econ` failed or returned an empty singular-value vector),
+  trailing entries were uninitialised.  No realistic call exercised the
+  faulty path, but the fix removes the latent UB.
+
+## Statistical changes
+
+- `get_random_direction_bound_robustH()` now uses classical `base::svd()`
+  to build the random-direction null instead of the robust M-estimator.
+  The null is generated from i.i.d. Gaussian draws, where the M-estimator
+  only adds Monte-Carlo noise without removing bias; the classical SVD
+  matches the AJIVE reference implementation.  All other pipeline steps
+  continue to use the robust SVD.  See
+  `audits/2026-05-09-rajiveplus-vs-rajive-parity.md` for the rationale.
+
 ## New features
 
 - `jackstraw_rajive()` gains three new arguments for posterior inclusion

@@ -201,10 +201,14 @@ List RobRSVD_all_cpp(
     //                           uinit=svdinit$u[,1], vinit=svdinit$v[,1])
     List res0 = RobRSVD1_cpp(data, sinit1, uinit1, vinit1, huberk, niter, tol);
 
-    // Accumulate d (vector), U (m x r), V (n x r)
-    arma::vec d(Rm);
-    arma::mat U(data.n_rows, Rm);
-    arma::mat V(data.n_cols, Rm);
+    // Accumulate d (vector), U (m x r), V (n x r).
+    // Zero-initialise so that, on early break (residual is exactly zero,
+    // svd_econ failure), the trailing columns/entries are well-defined
+    // zeros instead of uninitialised memory.  We also resize down to the
+    // achieved rank before returning.
+    arma::vec d(Rm,            arma::fill::zeros);
+    arma::mat U(data.n_rows, Rm, arma::fill::zeros);
+    arma::mat V(data.n_cols, Rm, arma::fill::zeros);
 
     d(0) = Rcpp::as<double>(res0["s"]);
     U.col(0) = Rcpp::as<arma::vec>(res0["u"]);
@@ -212,6 +216,10 @@ List RobRSVD_all_cpp(
 
     // R: Red = d * u %*% t(v)   (scalar * outer product)
     arma::mat Red = d(0) * U.col(0) * V.col(0).t();
+
+    // Track how many components were actually filled in; used to shrink
+    // the return matrices on early break.
+    int filled = 1;
 
     // --- Ranks 2 .. Rm ---
     // R: for(i in 1:(Rm-1)) { data.svd1 <- RobRSVD1(data - Red, ...) }
@@ -236,9 +244,19 @@ List RobRSVD_all_cpp(
         d(i)      = Rcpp::as<double>(resi["s"]);
         U.col(i)  = Rcpp::as<arma::vec>(resi["u"]);
         V.col(i)  = Rcpp::as<arma::vec>(resi["v"]);
+        filled    = i + 1;
 
         // R: Red <- (u %*% diag(d) %*% t(v))
         Red = U.cols(0, i) * arma::diagmat(d.head(i + 1)) * V.cols(0, i).t();
+    }
+
+    // Shrink to the achieved rank when an early break occurred; otherwise
+    // a no-op.  This keeps the contract "ncol(u) == ncol(v) == length(d)
+    // == achieved rank" without leaking zero-padded trailing components.
+    if (filled < Rm) {
+        d = d.head(filled);
+        U = U.cols(0, filled - 1);
+        V = V.cols(0, filled - 1);
     }
 
     // Return d as a plain R numeric vector (arma::vec wraps to 1-column matrix).

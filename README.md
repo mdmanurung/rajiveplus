@@ -657,6 +657,14 @@ see `StatisticalAudits.md` and the function references for full details.
   random-direction (or permutation) bound via `max()`. The rule is
   conservative in practice but does not carry a formal FWER/FDR
   guarantee for rank selection.
+- **Random-direction null uses classical SVD.** The random-direction
+  bound is generated from i.i.d. Gaussian draws, where the M-estimator
+  only adds Monte-Carlo noise without removing bias. `rajiveplus`
+  therefore uses `base::svd()` inside `get_random_direction_bound_robustH()`,
+  matching the AJIVE reference implementation. The robust SVD is still
+  used for every other step in the pipeline (signal-block SVDs and the
+  joint / individual decompositions). See
+  `audits/2026-05-09-rajiveplus-vs-rajive-parity.md` for the rationale.
 - **Component scores are estimates**, not fixed design variables.
   Downstream tests via `associate_components()` and `jackstraw_rajive()`
   do not propagate score-estimation uncertainty and should be treated as

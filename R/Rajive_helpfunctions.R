@@ -179,6 +179,15 @@ wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=100
 #'
 #' @return A numeric vector of length \code{num_samples} containing the
 #'   random-direction bound samples.
+#'
+#' @details
+#' The random-direction null is constructed from i.i.d. Gaussian matrices,
+#' so the population is symmetric and the M-estimator's down-weighting only
+#' adds Monte-Carlo noise.  We therefore use the classical \code{base::svd}
+#' here (matching the AJIVE reference implementation; see
+#' \code{audits/2026-05-09-rajiveplus-vs-rajive-parity.md}, item 1 of "things
+#' worth flagging").  The robust SVD remains in use throughout the rest of
+#' the pipeline where the input may carry outliers.
 
 get_random_direction_bound_robustH <- function(n_obs, dims, num_samples=1000,
                                                num_cores=2){
@@ -190,18 +199,19 @@ seed <- sample.int(.Machine$integer.max, 1L)
 doParallel::registerDoParallel(numCores)
 on.exit(doParallel::stopImplicitCluster(), add = TRUE)
 
-# Use the M-estimator robust SVD throughout for consistency with the rest
-# of the pipeline (the package's design choice is to remain robust even on
-# nominally clean inputs).
+# The null distribution is generated from clean Gaussian draws, so the
+# robust M-estimator adds noise without removing bias.  Use classical SVD
+# to match the reference AJIVE / Wedin null distribution.  The robust SVD
+# is still used throughout the rest of the pipeline (signal-block SVDs,
+# joint and individual decompositions).
 rand_dir_samples <- .suppress_worker_build_warnings(
   foreach::foreach (s=1:num_samples, .options.RNG = seed) %dorng% {
 
   X <- lapply(dims1, function(l) matrix(rnorm(n_obs * l, mean=0,sd=1), n_obs, l))
-  rand_subspaces <- lapply(X, function(l) get_svd_robustH(l)[['u']])
+  rand_subspaces <- lapply(X, function(l) svd(l)[["u"]])
 
   M <- do.call(cbind, rand_subspaces)
-  M_svd <- get_svd_robustH(M, rank = 1L)
-  d1 <- M_svd[['d']][1L]
+  d1 <- svd(M, nu = 0L, nv = 0L)[["d"]][1L]
 
   d1^2
 
