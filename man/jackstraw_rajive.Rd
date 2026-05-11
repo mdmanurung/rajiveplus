@@ -27,8 +27,8 @@ jackstraw_rajive(
 
 \item{n_null}{Positive integer; number of null F-statistics generated per
 feature per joint component.  Larger values give more stable p-values
-at the cost of computation time.  Default \code{10}; recommended
-\code{50}--\code{100} for publication-quality results.}
+at the cost of computation time.  Default \code{10}; use larger values
+for analyses where tail resolution is important.}
 
 \item{correction}{Character string controlling multiple-testing correction.
 One of \code{"BH"} (default), \code{"BY"}, \code{"bonferroni"}, or

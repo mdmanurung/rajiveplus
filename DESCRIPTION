@@ -6,7 +6,7 @@ Authors@R: c(
            family = "Manurung",
            role = c("aut", "cre"),
            email = "m.d.manurung@lumc.nl"))
-Description: Blazing fast re-implementation of the RAJIVE algorithm for joint and individual variation explained in multi-view data. This package provides a user-friendly interface to perform RAJIVE analysis, along with tools for visualization and interpretation of results.
+Description: Implements Robust Angle-based Joint and Individual Variation Explained (RAJIVE) for matched multi-view data. Provides robust singular value decomposition, joint and individual component estimation, diagnostic visualization, feature-level jackstraw testing, metadata association, and stability summaries.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.1.0)

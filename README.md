@@ -27,27 +27,6 @@ reference](https://mdmanurung.github.io/rajiveplus/reference/) and the
 [vignettes](https://mdmanurung.github.io/rajiveplus/articles/) for
 benchmarks and applied analyses.
 
-## Development status (May 2026)
-
-- Latest completed fast validation gate: **466 PASS, 0 FAIL, 0 WARN, 7
-  SKIP** with slow calibration skipped; `devtools::document()` was
-  clean.
-- Audit-driven implementation work through Phase R is on HEAD. Remaining
-  release work is validation only: Gate 2–4 and the dependent slow
-  calibration job are tracked in `PROGRESS.md`.
-- **New in this cycle:**
-  - `jackstraw_rajive()` gains optional posterior inclusion
-    probabilities (`pip = TRUE`) via `qvalue::lfdr()`.
-  - `jackstraw_rajive()` defaults to global `"BH"` (Benjamini–Hochberg)
-    adjustment again; pass `correction = "BY"` for the more conservative
-    Benjamini–Yekutieli procedure under arbitrary feature dependence.
-  - Joint-rank selection records Wedin, random-direction, and optional
-    permutation-bound diagnostics for downstream plotting and auditing.
-- Live handoff references:
-  - [PROGRESS.md](PROGRESS.md) for the operational next command.
-  - [audits/PLANS.md](audits/PLANS.md) for strategy, gates, and deferred
-    items.
-
 ## Installation
 
 The development version of rajiveplus can be installed from
@@ -427,7 +406,7 @@ dependence. Pass `pip = TRUE` (requires Bioconductor `qvalue`) for
 posterior inclusion probabilities in addition to p-values.
 
 ``` r
-# Run jackstraw test (increase n_null to 50-100 for publication-quality results)
+# Run jackstraw testing; increase n_null when finer tail resolution is needed
 js <- jackstraw_rajive(ajive.results.robust, data.ajive,
                        alpha = 0.05, n_null = 10)
 
@@ -608,22 +587,19 @@ knitr::include_graphics("man/figures/README-jackstraw-loadings-significance.png"
 
 ## Interpretation notes
 
-A few caveats worth keeping in mind when interpreting `Rajive()` output;
-see `StatisticalAudits.md` and the function references for full details.
+A few caveats worth keeping in mind when interpreting `Rajive()` output:
 
 - **Joint rank threshold** combines a Wedin bound with a
   random-direction (or permutation) bound via `max()`. The rule is
   conservative in practice but does not carry a formal FWER/FDR
   guarantee for rank selection.
 - **Random-direction null uses classical SVD.** The random-direction
-  bound is generated from i.i.d. Gaussian draws, where the M-estimator
-  only adds Monte-Carlo noise without removing bias. `rajiveplus`
-  therefore uses `base::svd()` inside
-  `get_random_direction_bound_robustH()`, matching the AJIVE reference
-  implementation. The robust SVD is still used for every other step in
-  the pipeline (signal-block SVDs and the joint / individual
-  decompositions). See
-  `audits/2026-05-09-rajiveplus-vs-rajive-parity.md` for the rationale.
+  bound uses i.i.d. Gaussian draws, where the M-estimator only adds
+  Monte-Carlo noise without removing bias. `rajiveplus` therefore uses
+  `base::svd()` inside `get_random_direction_bound_robustH()`, matching
+  the AJIVE reference implementation. The robust SVD is still used for
+  every other step in the pipeline, including signal-block SVDs and the
+  joint and individual decompositions.
 - **Component scores are estimates**, not fixed design variables.
   Downstream tests via `associate_components()` and `jackstraw_rajive()`
   do not propagate score-estimation uncertainty and should be treated as

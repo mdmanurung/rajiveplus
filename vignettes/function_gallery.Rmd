@@ -424,8 +424,8 @@ cat("Joint rank estimate:", diag_wide$joint_rank_estimate, "\n")
 ```
 
 
-**Interpretation.** Overall threshold = `max(wedin_cutoff, rand_cutoff)` —
-a practical heuristic, not a formal FWER/FDR guarantee.
+**Interpretation.** Overall threshold = `max(wedin_cutoff, rand_cutoff)`;
+this empirical rule is not a formal FWER/FDR guarantee.
 
 ---
 
@@ -1087,8 +1087,8 @@ cat("File size (bytes):", file.info(tmp_html)$size, "\n")
 ```
 
 
-**Interpretation.** A self-contained HTML starting-point deliverable. For
-publication-quality outputs, use the specialized functions demonstrated above.
+**Interpretation.** A standalone HTML report for review. For final
+analyses, use the specialized functions demonstrated above.
 
 ---
 

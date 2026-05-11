@@ -234,8 +234,8 @@ knitr::kable(comp_tbl,
              caption = "Decomposition structure: joint and individual ranks per block")
 ```
 
-To verify that joint factors are approximately uncorrelated — a sanity check
-analogous to `plot_factor_cor()` in MOFA2 — we plot the pairwise scatter of
+To verify that joint factors are approximately uncorrelated, a diagnostic check
+analogous to `plot_factor_cor()` in MOFA2, we plot the pairwise scatter of
 joint scores.  RaJIVE imposes orthogonality within the joint subspace by
 construction, so any residual correlation signals a potential fitting issue.
 

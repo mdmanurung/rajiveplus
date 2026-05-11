@@ -10,7 +10,7 @@
 # the JIVE setting.
 
 # ---------------------------------------------------------------------------
-# Part 1: Core statistical helpers (internal, not exported)
+# Core statistical helpers (internal, not exported)
 # ---------------------------------------------------------------------------
 
 #' Vectorized OLS F-statistics for simple linear regression
@@ -182,7 +182,7 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 
 
 # ---------------------------------------------------------------------------
-# Part 2: Main exported function
+# Main exported function
 # ---------------------------------------------------------------------------
 
 #' Jackstraw significance testing for RaJIVE joint loadings
@@ -213,8 +213,8 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #'   \code{0.05}.
 #' @param n_null Positive integer; number of null F-statistics generated per
 #'   feature per joint component.  Larger values give more stable p-values
-#'   at the cost of computation time.  Default \code{10}; recommended
-#'   \code{50}--\code{100} for publication-quality results.
+#'   at the cost of computation time.  Default \code{10}; use larger values
+#'   for analyses where tail resolution is important.
 #' @param correction Character string controlling multiple-testing correction.
 #'   One of \code{"BH"} (default), \code{"BY"}, \code{"bonferroni"}, or
 #'   \code{"none"}.  Adjustments are applied globally across all
@@ -505,7 +505,7 @@ jackstraw_rajive <- function(ajive_output, blocks,
 
 
 # ---------------------------------------------------------------------------
-# Part 3: S3 methods
+# S3 methods
 # ---------------------------------------------------------------------------
 
 #' Print method for jackstraw_rajive objects
@@ -612,7 +612,7 @@ summary.jackstraw_rajive <- function(object, ...) {
 
 
 # ---------------------------------------------------------------------------
-# Part 4: Visualization
+# Visualization
 # ---------------------------------------------------------------------------
 
 #' Plot jackstraw results
@@ -839,7 +839,7 @@ plot_jackstraw <- function(jackstraw_result,
 
 
 # ---------------------------------------------------------------------------
-# Part 5: Convenience accessor
+# Convenience accessor
 # ---------------------------------------------------------------------------
 
 #' Extract significant variables from jackstraw results

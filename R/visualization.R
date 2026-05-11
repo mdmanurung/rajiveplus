@@ -210,8 +210,8 @@ extract_components <- function(ajive_output = NULL,
 #'   \item{\code{"rank_threshold"}}{Squared observed singular values with
 #'     Wedin and/or random-direction cutoff lines, colored by joint/nonjoint
 #'     classification.  The active threshold is the
-#'     \code{max(wedin, random_direction)} rule -- a practical heuristic that
-#'     is conservative in practice but does not carry formal FWER or FDR
+#'     \code{max(wedin, random_direction)} empirical rule, which is
+#'     conservative in practice but does not provide formal FWER or FDR
 #'     control for rank selection.}
 #'   \item{\code{"bound_distributions"}}{Histogram(s) of Wedin and/or
 #'     random-direction bound samples with percentile cutoff lines.}

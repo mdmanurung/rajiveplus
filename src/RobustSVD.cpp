@@ -65,8 +65,8 @@ List RobRSVD1_cpp(
 
     while (localdiff > tol && iter < niter) {
 
-        // W-M7: recompute robust scale each iteration from the current
-        // residual to avoid freezing Huber weights at initialization.
+        // Recompute robust scale from the current residual so Huber weights
+        // track the fitted component throughout the iteration.
         Rvec = arma::vectorise(Rmat);
         mysigma = arma::median(arma::abs(Rvec)) / 0.675;
         if (!std::isfinite(mysigma) || mysigma <= 0.0) {
