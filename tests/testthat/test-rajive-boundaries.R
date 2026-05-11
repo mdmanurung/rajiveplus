@@ -119,3 +119,31 @@ test_that("get_joint_decomposition_robustH reconstructs U U^T X", {
   expect_lt(norm(J_recon - J_target, type = "F"), 1e-8)
 })
 
+# ---------------------------------------------------------------------------
+# RaJIVE parity: identifiability filter uses original norm(score) criterion
+# ---------------------------------------------------------------------------
+
+test_that("identifiability filter uses original RaJIVE norm(score) criterion", {
+  q <- rep(0.5, 4)  # unit vector
+  X <- q %*% t(rep(0.09, 4))
+
+  block_svd <- list(
+    list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1)),
+    list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1))
+  )
+
+  out <- rajiveplus:::get_joint_scores_robustH(
+    blocks = list(X, X),
+    block_svd = block_svd,
+    initial_signal_ranks = c(1L, 1L),
+    sv_thresholds = c(0.25, 0.25),
+    n_wedin_samples = NA,
+    n_rand_dir_samples = NA,
+    n_perm_samples = NA,
+    joint_rank = 1L,
+    num_cores = 1L
+  )
+
+  expect_equal(ncol(out$joint_scores), 1L)
+  expect_identical(out$rank_sel_results$identif_dropped, integer(0L))
+})

@@ -42,7 +42,7 @@
 #' and a random-direction bound, a permutation bound, or both.  The combined
 #' threshold is \code{max(wedin, rand_dir, perm)}; this heuristic is conservative in
 #' practice but does not carry a formal FWER/FDR guarantee for rank
-#' selection (see \code{StatisticalAudits.md}, Finding 6).
+#' selection.
 #'
 #' @param blocks List of numeric matrices. Each block has \eqn{n} rows
 #'   (matched samples, in the same order across blocks) and \eqn{p_k}
@@ -94,7 +94,8 @@
 #'     \item{\code{joint_rank_sel}}{Diagnostics from joint-rank selection:
 #'       observed singular values, Wedin and random-direction (or
 #'       permutation) samples, percentile cutoffs, and the indices of
-#'       components dropped by the L2 identifiability filter.}
+#'       components dropped by the original RaJIVE \code{norm(score)}
+#'       identifiability filter.}
 #'   }
 #'
 #' @section Robustness and Huber tuning:
@@ -134,8 +135,8 @@
 #' \{50, 40, 30\}), calibration experiments find an empirical Type-I rate
 #' of approximately 2--8\% for \code{n_wedin_samples = n_rand_dir_samples =
 #' 200}; the rate approaches 5\% from below as the sample count increases.
-#' See \code{StatisticalAudits.md}, Finding 6, and the package calibration
-#' test in \code{tests/testthat/test-calibration-joint-rank.R} for details.
+#' Treat these numbers as empirical diagnostics for the stated simulation
+#' setting rather than a universal error-rate guarantee.
 #'
 #' @section Reproducibility:
 #' For exactly reproducible results, set \code{set.seed()} (and, for
@@ -173,7 +174,7 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   num_cores <- max(1L, as.integer(num_cores))
   if (!is.na(seed)) set.seed(as.integer(seed))
 
-  # Phase 4 boundary validation: abort early with clear classes/messages.
+  # Abort early with clear classes/messages for invalid inputs.
   if (!is.list(blocks) || length(blocks) < 1L) {
     cli::cli_abort(
       c("`blocks` must be a non-empty list of numeric matrices."),
@@ -224,7 +225,7 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
     )
   }
 
-  # Phase 2 reproducibility: parallel paths require L'Ecuyer-CMRG.
+  # Parallel paths use L'Ecuyer-CMRG for reproducible sampling.
   if (num_cores > 1L && RNGkind()[1L] != "L'Ecuyer-CMRG") {
     prev_rng <- RNGkind()
     RNGkind("L'Ecuyer-CMRG")
@@ -323,9 +324,8 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
 #' strictly less than \code{min(nrow(X), ncol(X))} for each block.
 
 get_sv_threshold <- function(singular_values, rank){
-  # W-H1: boundary guard — when rank == length(singular_values) there is no
-  # rank+1 entry; use half the last singular value (midpoint to the implicit
-  # floor at 0) to avoid returning NA.
+  # When rank == length(singular_values) there is no rank+1 entry; use half
+  # the last singular value (midpoint to the implicit floor at 0) to avoid NA.
   if (rank == length(singular_values)) {
     0.5 * singular_values[rank]
   } else {
@@ -467,13 +467,9 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
     for(j in 1:joint_rank_estimate){
 
       score <- t(blocks[[k]]) %*% joint_scores[ , j]
-      # Spectral / L2 norm to match the scale of `sv_thresholds`, which are
-      # derived from singular values.  `norm()` defaults to type = "O"
-      # (max absolute column sum = sum(|score|) for a one-column matrix),
-      # which is systematically larger than the L2 norm and biased the
-      # identifiability filter toward keeping components.  See audit
-      # finding #3.
-      sv <- sqrt(sum(score^2))
+      # Match original RaJIVE's identifiability check.  For this one-column
+      # matrix, base::norm() uses type = "O", equivalent to sum(abs(score)).
+      sv <- norm(score)
 
       if(sv < sv_thresholds[[k]]){
         message('removing column ', j)
@@ -611,6 +607,3 @@ get_joint_decomposition_robustH <- function(X, joint_scores, full=TRUE){
   joint_decomposition
 
 }
-
-
-

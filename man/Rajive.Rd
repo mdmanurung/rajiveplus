@@ -75,7 +75,8 @@ An object of class \code{"rajive"}: a named list containing
     \item{\code{joint_rank_sel}}{Diagnostics from joint-rank selection:
       observed singular values, Wedin and random-direction (or
       permutation) samples, percentile cutoffs, and the indices of
-      components dropped by the L2 identifiability filter.}
+      components dropped by the original RaJIVE \code{norm(score)}
+      identifiability filter.}
   }
 }
 \description{
@@ -90,7 +91,7 @@ the stacked signal-score matrix to a threshold derived from a Wedin bound
 and a random-direction bound, a permutation bound, or both.  The combined
 threshold is \code{max(wedin, rand_dir, perm)}; this heuristic is conservative in
 practice but does not carry a formal FWER/FDR guarantee for rank
-selection (see \code{StatisticalAudits.md}, Finding 6).
+selection.
 }
 \section{Robustness and Huber tuning}{
 
@@ -136,8 +137,8 @@ heuristic: it has no formal FWER or FDR guarantee.  Under a global null
 \{50, 40, 30\}), calibration experiments find an empirical Type-I rate
 of approximately 2--8\% for \code{n_wedin_samples = n_rand_dir_samples =
 200}; the rate approaches 5\% from below as the sample count increases.
-See \code{StatisticalAudits.md}, Finding 6, and the package calibration
-test in \code{tests/testthat/test-calibration-joint-rank.R} for details.
+Treat these numbers as empirical diagnostics for the stated simulation
+setting rather than a universal error-rate guarantee.
 }
 
 \section{Reproducibility}{

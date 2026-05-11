@@ -22,8 +22,8 @@ get_svd_robustH <- function(X, rank=NULL){
 }
 
 
-# Note: get_sv_threshold() is defined in R/Rajive.R; the duplicate that
-# previously lived here was removed (audit finding #16).
+# Note: get_sv_threshold() is defined in R/Rajive.R; the duplicate helper that
+# previously lived here was removed.
 
 
 #' Truncates a robust SVD.
@@ -38,9 +38,9 @@ get_svd_robustH <- function(X, rank=NULL){
 truncate_svd <- function(decomposition, rank){
 
   if(rank==0){
-    # W-M3: return 0-column matrices so ncol(u) / ncol(v) / length(d) == 0,
+    # Return 0-column matrices so ncol(u) / ncol(v) / length(d) == 0,
     # not 1.  Any caller using ncol() to determine rank now gets the correct
-    # answer.  svd_reconstruction() handles n×0 matrices correctly in R.
+    # answer.  svd_reconstruction() handles n x 0 matrices correctly in R.
     n <- dim(decomposition[['u']])[1]
     d <- dim(decomposition[['v']])[1]
     decomposition[['u']] <- matrix(0, nrow=n, ncol=0)
@@ -184,10 +184,9 @@ wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=100
 #' The random-direction null is constructed from i.i.d. Gaussian matrices,
 #' so the population is symmetric and the M-estimator's down-weighting only
 #' adds Monte-Carlo noise.  We therefore use the classical \code{base::svd}
-#' here (matching the AJIVE reference implementation; see
-#' \code{audits/2026-05-09-rajiveplus-vs-rajive-parity.md}, item 1 of "things
-#' worth flagging").  The robust SVD remains in use throughout the rest of
-#' the pipeline where the input may carry outliers.
+#' here to match the AJIVE reference implementation for this null
+#' calculation.  The robust SVD remains in use throughout the rest of the
+#' pipeline where the input may carry outliers.
 
 get_random_direction_bound_robustH <- function(n_obs, dims, num_samples=1000,
                                                num_cores=2){
@@ -530,9 +529,9 @@ showVarExplained_robust <- function(ajiveResults, blocks){
   # joint variance
   # joint is the second component for all 3
   VarJoint = rep(0, l)
-  # W-M2: access singular values by name [['d']] not by position [[1]]; the
-  # positional accessor silently uses u instead of d if the C++ return order
-  # ever changes.  sum(d^2) = ||J||_F^2.
+  # Access singular values by name [['d']] not by position [[1]]; the
+  # positional accessor silently uses u instead of d if the return order ever
+  # changes.  sum(d^2) = ||J||_F^2.
   for (i in 1:l) VarJoint[i] = sum(ajiveResults$block_decomps[[3*(i-1)+2]][["d"]]^2) /
                                     norm(blocks[[i]], type = "F")^2
 

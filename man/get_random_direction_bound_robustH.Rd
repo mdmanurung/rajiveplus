@@ -33,8 +33,7 @@ subspace matrix.  Returns samples on the scale of squared singular values.
 The random-direction null is constructed from i.i.d. Gaussian matrices,
 so the population is symmetric and the M-estimator's down-weighting only
 adds Monte-Carlo noise.  We therefore use the classical \code{base::svd}
-here (matching the AJIVE reference implementation; see
-\code{audits/2026-05-09-rajiveplus-vs-rajive-parity.md}, item 1 of "things
-worth flagging").  The robust SVD remains in use throughout the rest of
-the pipeline where the input may carry outliers.
+here to match the AJIVE reference implementation for this null
+calculation.  The robust SVD remains in use throughout the rest of the
+pipeline where the input may carry outliers.
 }

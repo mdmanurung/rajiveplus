@@ -85,14 +85,14 @@ A named list whose structure depends on \code{target}:
 Evaluates the stability of the estimated joint rank or block loadings via
 bootstrap resampling of the sample dimension.
 }
-\section{Procrustes alignment for loading stability (Finding 3)}{
+\section{Procrustes alignment for loading stability}{
 
 When \code{target = "loadings"}, bootstrap loading matrices are aligned to
 the reference (full-data) loading matrix using orthogonal Procrustes
 rotation before any variability summary is computed.  Raw bootstrap loading
 variation is dominated by rotational indeterminacy and is not interpretable
 without alignment.  All returned stability summaries are computed
-\strong{after} Procrustes alignment (StatisticalAudits.md, Finding 3).
+\strong{after} Procrustes alignment.
 }
 
 \examples{

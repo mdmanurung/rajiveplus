@@ -267,7 +267,7 @@ test_that("variable names are attached to results when colnames are present", {
   set.seed(10)
   n    <- 60
   # Use data with a true joint signal so joint_rank > 0 after the
-  # (L2-norm) identifiability filter.
+  # original RaJIVE norm(score) identifiability filter.
   Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(2, 2), n = n,
                       pks = c(10, 8), dist.type = 1)
   blocks <- Y$sim_data
@@ -355,12 +355,11 @@ test_that("jackstraw p-values are bounded away from 0 and well-spread", {
   js <- jackstraw_rajive(ajive_out, blocks,
                          alpha = 0.05, n_null = 20, correction = "none")
 
-  # Expected lower bound per block-component: 1 / (1 + d_k * n_null).
-  # For block 1: 1 / (1 + 80*20) = 1/1601.
-  # For block 2: 1 / (1 + 60*20) = 1/1201.
+  # Expected lower bound with default pool = "block":
+  # 1 / (1 + d_k * joint_rank * n_null).
   for (k in seq_along(js)) {
     d_k <- length(blocks[[k]][1, ])
-    lb  <- 1 / (1 + d_k * 20)
+    lb  <- 1 / (1 + d_k * attr(js, "joint_rank") * 20)
     for (j in seq_len(attr(js, "joint_rank"))) {
       p <- js[[k]][[j]]$p_values
       p <- p[!is.na(p)]

@@ -13,6 +13,10 @@
 
 The joint *rank* is recovered identically; the joint/individual *subspaces* differ at the sub-percent–single-digit-percent level on clean data and may differ much more under heavy contamination (where the original is demonstrably wrong).
 
+### Current decision (2026-05-11)
+
+The post-selection identifiability filter in `get_joint_scores_robustH()` was restored to the original RaJIVE criterion `sv <- norm(score)` for joint-rank path parity. The remaining parity-breaking changes are intentionally retained in `rajiveplus`: robust SVD scale and warm-start fixes, Wedin resampler and per-block rank fixes, reproducible RNG handling, classical-SVD random-direction nulls, optional `n_perm_samples`, validation and zero-rank guards, and exact low-rank joint decomposition.
+
 ---
 
 ## 1. Empirical parity tests
@@ -75,15 +79,15 @@ These are the algorithmic changes in `rajiveplus` that explain the numerical gap
 - **Hypothesised mechanism.** The leading SVD triplet of the *original* `data` is approximately aligned with component 1, so for component 2 it is roughly *orthogonal* to the leading direction of the residual and is a poor warm-start. This is consistent with — but does not by itself prove — the non-monotone original singular values seen in §1.1.
 - **Risk to user.** Components 2…r in the original are seeded badly. Whether they converge to a sensible local minimum depends on `huberk`, `niter`, `tol`, and the data. The `rajiveplus` choice (residual-leading-SVD warm start) is the standard pattern for deflation-based PCA/SVD estimators.
 
-### 2.3 Identifiability filter uses spectral / L2 norm, not 1-norm *(`get_joint_scores_robustH`)*
+### 2.3 Identifiability filter restored to original `norm(score)` *(`get_joint_scores_robustH`)*
 
 - **Original** [audits/RaJIVE/R/Rajive.R](audits/RaJIVE/R/Rajive.R#L200-L203):
   - line 200: `score <- t(blocks[[k]]) %*% joint_scores[ , j]` — a single column vector of length `p_k`.
   - line 201: `sv <- norm(score)` — `base::norm()` on a one-column matrix defaults to `type = "O"` (max absolute column sum), which for one column equals `sum(|score|)`.
   - line 203: `if(sv < sv_thresholds[[k]])` — compares to a threshold derived from singular values (spectral scale).
-- **`rajiveplus`** [R/Rajive.R](R/Rajive.R) — function `get_joint_scores_robustH`: `sv <- sqrt(sum(score^2))` with a comment block referring to "audit finding #3".
-- **Implication.** `sum(|x|) ≥ ‖x‖_2` always (Cauchy–Schwarz), with ratio up to `√length(x)`. The original criterion `‖x‖_1 < threshold_spectral` is therefore strictly *easier to fail* (i.e. **harder to trigger removal**) than the corrected `‖x‖_2 < threshold_spectral`. The original filter is systematically lenient. The fix tightens it.
-- **Direction-of-effect.** Because the new filter is stricter, `rajiveplus` will drop joint components the original keeps in cases where projection into block `k` is non-trivial in `‖·‖_1` but small in `‖·‖_2`. Estimated joint rank therefore generally **decreases** under the fix (or stays the same).
+- **Prior `rajiveplus` divergence**: this package had changed the check to `sv <- sqrt(sum(score^2))`, which is stricter because `sum(abs(x)) >= sqrt(sum(x^2))`.
+- **Current `rajiveplus` decision**: the check now uses `sv <- norm(score)` again to match original RaJIVE for joint-rank selection. This can keep borderline joint components that the temporary L2 check dropped; the notebook discrepancy in `03_rajive_0504_MM.ipynb` was traced to exactly this mechanism.
+- **Remaining caveat**: this restores parity only for the identifiability filter. Other source-level differences listed below still make exact end-to-end numerical equality with upstream RaJIVE unlikely.
 
 ### 2.4 Joint decomposition truncates to `joint_rank` *(`get_joint_decomposition_robustH`)*
 
@@ -149,7 +153,7 @@ These are the algorithmic changes in `rajiveplus` that explain the numerical gap
 | Does `rajiveplus::Rajive()` reproduce `RaJIVE::Rajive()` bit-for-bit? | **No.** |
 | Is the divergence a bug in `rajiveplus`? | **No** — every divergence is either a documented bug fix in the original or a defensive guard. |
 | Should the README / vignette claim "produces identical results"? | **No** — it should say *"reproduces RaJIVE's intended behaviour with several documented bug fixes; estimates are within a few percent of the original on clean data and substantially more accurate under contamination."* |
-| Action items for parity testing | (a) Drop any test asserting numerical equality with upstream `RaJIVE`. (b) Add regression tests against frozen `rajiveplus` outputs (snapshot). (c) Optionally provide a `legacy = TRUE` flag that disables fixes §2.1, §2.2, §2.3, §2.7, §2.8 for users who need byte-identical replication of a previous analysis. |
+| Action items for parity testing | (a) Drop any test asserting numerical equality with upstream `RaJIVE`. (b) Add regression tests against frozen `rajiveplus` outputs. (c) If byte-identical replication is ever required, design a broader compatibility mode for the remaining retained divergences (§2.1, §2.2, §2.7, §2.8, and API/runtime additions). |
 
 ## 4. Files referenced
 

@@ -118,14 +118,14 @@ variables.
 \section{Statistical warnings}{
 
 
-\strong{Score estimation error (Finding 4):}
+\strong{Score estimation error:}
 Component scores are estimated quantities, not fixed design variables.
 Estimation error attenuates effect sizes and inflates Type-I error in naive
 tests. P-values returned by this function do \strong{not} propagate score
 estimation uncertainty.  Treat results as post-decomposition exploratory
 associations, not exact fixed-design inference.
 
-\strong{Survival split bias (Finding 5):}
+\strong{Survival split bias:}
 When \code{mode = "survival"} and a score-split (\code{split = "median"}
 or \code{split = "tertile"}) is used, the resulting log-rank or Cox p-value
 is data-adaptive and may be anti-conservative.  Prefer

@@ -111,13 +111,12 @@ optionally corrected for multiple testing.
 \emph{associated with} the \emph{estimated} joint component score --- the
 score as recovered from data by RaJIVE, not the unobservable true latent
 factor.  It does not imply that the feature is a causal driver or that
-the association would hold against the true latent score
-(StatisticalAudits.md, Finding 8).
+the association would hold against the true latent score.
 }
 \note{
-The current development version defaults to \code{"BH"}.  For
-  strongly correlated omics blocks, switch to \code{correction = "BY"} for
-  FDR control under arbitrary dependency.
+The default \code{"BH"} correction assumes positive regression
+  dependency among tests.  For strongly correlated omics blocks, switch to
+  \code{correction = "BY"} for FDR control under arbitrary dependency.
 }
 \examples{
 \donttest{

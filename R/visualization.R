@@ -212,7 +212,7 @@ extract_components <- function(ajive_output = NULL,
 #'     classification.  The active threshold is the
 #'     \code{max(wedin, random_direction)} rule -- a practical heuristic that
 #'     is conservative in practice but does not carry formal FWER or FDR
-#'     control for rank selection (see \code{StatisticalAudits.md}, Finding 6).}
+#'     control for rank selection.}
 #'   \item{\code{"bound_distributions"}}{Histogram(s) of Wedin and/or
 #'     random-direction bound samples with percentile cutoff lines.}
 #'   \item{\code{"ajive_diagnostic"}}{Full composite panel combining the
@@ -282,8 +282,7 @@ extract_components <- function(ajive_output = NULL,
 #'   Variance plots distinguish \emph{joint} variance explained from
 #'   \emph{block-specific individual} variance explained after joint signal
 #'   removal.  The two quantities are not interchangeable and should not be
-#'   described with generic PCA-style language (StatisticalAudits.md,
-#'   Finding 7).
+#'   described with generic PCA-style language.
 #'
 #' @examples
 #' \donttest{
@@ -1133,14 +1132,14 @@ plot_components <- function(ajive_output = NULL,
 #'
 #' @section Statistical warnings:
 #'
-#' \strong{Score estimation error (Finding 4):}
+#' \strong{Score estimation error:}
 #' Component scores are estimated quantities, not fixed design variables.
 #' Estimation error attenuates effect sizes and inflates Type-I error in naive
 #' tests. P-values returned by this function do \strong{not} propagate score
 #' estimation uncertainty.  Treat results as post-decomposition exploratory
 #' associations, not exact fixed-design inference.
 #'
-#' \strong{Survival split bias (Finding 5):}
+#' \strong{Survival split bias:}
 #' When \code{mode = "survival"} and a score-split (\code{split = "median"}
 #' or \code{split = "tertile"}) is used, the resulting log-rank or Cox p-value
 #' is data-adaptive and may be anti-conservative.  Prefer
@@ -1239,7 +1238,7 @@ associate_components <- function(ajive_output,
     "[associate_components] NOTE: Component scores are estimated quantities. ",
     "Score estimation error is NOT propagated into the returned p-values. ",
     "Treat results as post-decomposition exploratory associations, not exact ",
-    "fixed-design inference (StatisticalAudits.md, Finding 4)."
+    "fixed-design inference."
   )
 
   # --- survival split bias warning (#5) ---
@@ -1248,8 +1247,7 @@ associate_components <- function(ajive_output,
       "[associate_components] WARNING: Split-based survival inference ",
       "(split = \"", split, "\") is data-adaptive and may be anti-conservative. ",
       "Use split = \"none\" (continuous-score Cox model) for primary inference. ",
-      "Split-based results should be labeled as descriptive summaries ",
-      "(StatisticalAudits.md, Finding 5)."
+      "Split-based results should be labeled as descriptive summaries."
     )
   }
 
@@ -1398,13 +1396,13 @@ associate_components <- function(ajive_output,
 #' Evaluates the stability of the estimated joint rank or block loadings via
 #' bootstrap resampling of the sample dimension.
 #'
-#' @section Procrustes alignment for loading stability (Finding 3):
+#' @section Procrustes alignment for loading stability:
 #' When \code{target = "loadings"}, bootstrap loading matrices are aligned to
 #' the reference (full-data) loading matrix using orthogonal Procrustes
 #' rotation before any variability summary is computed.  Raw bootstrap loading
 #' variation is dominated by rotational indeterminacy and is not interpretable
 #' without alignment.  All returned stability summaries are computed
-#' \strong{after} Procrustes alignment (StatisticalAudits.md, Finding 3).
+#' \strong{after} Procrustes alignment.
 #'
 #' @param ajive_output An object of class \code{"rajive"} (output of
 #'   \code{\link{Rajive}}).  Required for \code{target = "loadings"} and

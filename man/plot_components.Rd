@@ -97,7 +97,7 @@ Supported plot types include:
     classification.  The active threshold is the
     \code{max(wedin, random_direction)} rule -- a practical heuristic that
     is conservative in practice but does not carry formal FWER or FDR
-    control for rank selection (see \code{StatisticalAudits.md}, Finding 6).}
+    control for rank selection.}
   \item{\code{"bound_distributions"}}{Histogram(s) of Wedin and/or
     random-direction bound samples with percentile cutoff lines.}
   \item{\code{"ajive_diagnostic"}}{Full composite panel combining the
@@ -120,8 +120,7 @@ Supported plot types include:
   Variance plots distinguish \emph{joint} variance explained from
   \emph{block-specific individual} variance explained after joint signal
   removal.  The two quantities are not interchangeable and should not be
-  described with generic PCA-style language (StatisticalAudits.md,
-  Finding 7).
+  described with generic PCA-style language.
 }
 
 \examples{

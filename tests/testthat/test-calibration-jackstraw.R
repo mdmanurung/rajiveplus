@@ -1,8 +1,8 @@
 # Slow calibration tests for jackstraw_rajive().
 #
-# Design note: Rajive() applies an L2 identifiability filter that drops
-# any joint component whose projection onto a block has L2 norm below the
-# block's sv_threshold (derived from the block's own singular values).
+# Design note: Rajive() applies the original RaJIVE norm(score)
+# identifiability filter, dropping joint components whose projection onto a
+# block falls below that block's sv_threshold.
 # On pure-noise data, this filter correctly drops even a forced joint_rank=1
 # component.  Tests therefore use ajive.data.sim() to generate blocks with
 # genuine dense joint signal (which passes the filter), then augment each
@@ -25,7 +25,7 @@ test_that("jackstraw p-values are uniform for null-augmented columns", {
 
   # Construction:
   #   - ajive.data.sim K=2, rankJ=1, rankA=c(3,2), n=60, pks=c(10,8)
-  #     -> dense joint signal in first 10/8 features, passes L2 filter.
+  #     -> dense joint signal in first 10/8 features, passes identifiability filter.
   #   - Append p_null=40 pure-noise columns to each block.
   #   - initial_signal_ranks = c(4,3) = rankJ + rankA (full signal space).
   #   - Collect p-values for null columns (cols 11:50 / 9:48) only.
