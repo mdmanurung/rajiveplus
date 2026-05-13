@@ -21,6 +21,7 @@ export BLIS_NUM_THREADS=1
 
 R_BIN="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R"
 R_SCRIPT="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript"
+export RAJIVEPLUS_VIGNETTE_HEAVY=0
 
 # Install package (with lock retry — other regen jobs may have just finished).
 for i in 1 2 3; do
@@ -29,11 +30,6 @@ for i in 1 2 3; do
   echo "Install attempt $i failed, retrying in 60s..."
   sleep 60
 done
-
-# Ensure light mode for all vignettes before verification builds.
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE         # set to TRUE once to regenerate .rds cache files/g' vignettes/benchmarking.Rmd || true
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE  # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd || true
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to FALSE after \.rds files are generated/run_heavy <- FALSE  # set to FALSE after .rds files are generated/g' vignettes/cll_application.Rmd || true
 
 # Validate expected cache files exist before build.
 required=(

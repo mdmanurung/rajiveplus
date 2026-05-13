@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   message   = FALSE,
   warning   = FALSE
 )
-run_heavy <- FALSE  # set to FALSE after .rds files are generated
+run_heavy <- identical(Sys.getenv("RAJIVEPLUS_VIGNETTE_HEAVY"), "1")
 data_dir  <- "data"
 ```
 
@@ -209,7 +209,8 @@ cll_fit <- Rajive(
   n_wedin_samples      = 100L,
   n_rand_dir_samples   = 100L,
   joint_rank           = NA,
-  num_cores            = 12L
+  num_cores            = 12L,
+  seed                 = 42L
 )
 saveRDS(cll_fit, file.path(data_dir, "cll_rajive_results.rds"))
 ```
@@ -336,7 +337,8 @@ stab_rank <- assess_stability(
   target                = "joint_rank",
   B                     = 20L,
   sample_frac           = 0.8,
-  num_cores             = 2L
+  num_cores             = 2L,
+  seed                  = 43L
 )
 saveRDS(stab_rank, file.path(data_dir, "cll_stability.rds"))
 ```
@@ -374,6 +376,15 @@ ve_tbl <- summarize_components(ajive_output = cll_fit,
                                summary_type = "variance")
 knitr::kable(ve_tbl, digits = 2,
              caption = "Variance explained by component type per block (%)")
+```
+
+```{r feature-variance-table}
+vp <- joint_variance_partition(cll_fit, blocks)
+top_joint_var <- vp[order(vp$joint_prop, decreasing = TRUE),
+                    c("block", "feature", "joint_prop",
+                      "individual_prop", "residual_prop")]
+knitr::kable(head(top_joint_var, 10), digits = 3,
+             caption = "Features with the largest joint variance proportion")
 ```
 
 ---

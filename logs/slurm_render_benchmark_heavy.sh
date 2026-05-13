@@ -1,13 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=rajive_vignettes
+#SBATCH --job-name=rajive_bench_heavy
 #SBATCH --partition=all
-#SBATCH --array=1-6
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
-#SBATCH --time=24:00:00
-#SBATCH --output=logs/slurm_render_vignettes_%A_%a.log
-#SBATCH --error=logs/slurm_render_vignettes_%A_%a.log
+#SBATCH --time=36:00:00
+#SBATCH --output=logs/slurm_render_benchmark_heavy_%j.log
+#SBATCH --error=logs/slurm_render_benchmark_heavy_%j.log
+
+set -euo pipefail
 
 cd /exports/para-lipg-hpc/mdmanurung/RaJIVEutils
 
@@ -24,29 +25,13 @@ fi
 
 mkdir -p logs/vignette_renders
 
-JOB_LIB="${SLURM_TMPDIR:-/tmp}/rajiveplus_vignette_lib_${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+JOB_LIB="${SLURM_TMPDIR:-/tmp}/rajiveplus_benchmark_heavy_lib_${SLURM_JOB_ID}"
 mkdir -p "${JOB_LIB}"
 
-VIGNETTES=(
-  "vignettes/benchmarking.Rmd"
-  "vignettes/cll_application.Rmd"
-  "vignettes/function_gallery.Rmd"
-  "vignettes/inference.Rmd"
-  "vignettes/jackstraw_scaling.Rmd"
-  "vignettes/microbiome_application.Rmd"
-)
+RMD="vignettes/benchmarking_heavy.Rmd"
 
-IDX=$((SLURM_ARRAY_TASK_ID - 1))
-RMD="${VIGNETTES[$IDX]}"
-
-if [ -z "$RMD" ]; then
-  echo "No vignette mapped for SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID}"
-  exit 2
-fi
-
-echo "====== LIGHT VIGNETTE RENDER START ======"
+echo "====== HEAVY BENCHMARK RENDER START ======"
 echo "Timestamp: $(date)"
-echo "Task: ${SLURM_ARRAY_TASK_ID}"
 echo "Vignette: ${RMD}"
 echo "CPUs: ${SLURM_CPUS_PER_TASK}"
 echo "Output dir: logs/vignette_renders"
@@ -64,7 +49,7 @@ fi
 
 echo ""
 echo "Rendering ${RMD}"
-conda run -n R4_51 R --no-save -q -e ".libPaths(c('${JOB_LIB}', .libPaths())); rmarkdown::render('${RMD}', output_format = 'rmarkdown::html_vignette', output_dir = 'logs/vignette_renders', clean = TRUE)" 2>&1
+conda run -n R4_51 R --no-save -q -e ".libPaths(c('${JOB_LIB}', .libPaths())); rmarkdown::render('${RMD}', output_format = 'rmarkdown::html_document', output_file = 'benchmarking_heavy.html', output_dir = 'logs/vignette_renders', clean = TRUE)" 2>&1
 RENDER_EXIT=$?
 
 echo "Render exit code: ${RENDER_EXIT}"

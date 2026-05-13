@@ -24,14 +24,7 @@ export BLIS_NUM_THREADS=1
 R_BIN="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R"
 R_SCRIPT="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript"
 
-cleanup() {
-  perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE         # set to TRUE once to regenerate .rds cache files/g' vignettes/benchmarking.Rmd || true
-}
-trap cleanup EXIT
-
-perl -0pi -e 's/run_heavy <- FALSE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- TRUE          # set to TRUE once to regenerate .rds cache files/g' vignettes/benchmarking.Rmd
-
 "${R_BIN}" CMD INSTALL .
-"${R_SCRIPT}" -e "rmarkdown::render('vignettes/benchmarking.Rmd')"
+"${R_SCRIPT}" -e "rmarkdown::render('vignettes/benchmarking_heavy.Rmd', output_format = 'rmarkdown::html_document', output_file = 'benchmarking_heavy.html', output_dir = 'logs/vignette_renders', clean = TRUE)"
 
 echo "EXIT CODE: $?"

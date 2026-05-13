@@ -11,11 +11,7 @@
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
-
-# Ensure light mode for all vignettes before verification builds.
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE         # set to TRUE once to regenerate .rds cache files/g' vignettes/benchmarking.Rmd || true
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE  # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd || true
-perl -0pi -e 's/run_heavy <- TRUE\s+# set to FALSE after \.rds files are generated/run_heavy <- FALSE  # set to FALSE after .rds files are generated/g' vignettes/cll_application.Rmd || true
+export RAJIVEPLUS_VIGNETTE_HEAVY=0
 
 # Validate expected cache files exist before build.
 required=(

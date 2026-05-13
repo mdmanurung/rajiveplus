@@ -1,8 +1,8 @@
 ---
-title: "Where the Time Goes: rajiveplus vs RaJIVE"
+title: "A Lightweight Runtime Smoke Test"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Where the Time Goes: rajiveplus vs RaJIVE}
+  %\VignetteIndexEntry{A Lightweight Runtime Smoke Test}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,402 +16,129 @@ knitr::opts_chunk$set(
   message   = FALSE,
   warning   = FALSE
 )
-run_heavy <- FALSE         # set to TRUE once to regenerate .rds cache files
-data_dir  <- "data"        # relative to vignettes/
+data_dir <- "data"
 ```
-
-
-
 
 ## The question
 
-Matrix decompositions ask a simple question and pay for it many times: which
-directions in these blocks are shared? In Robust aJIVE, the expensive part is
-the repeated robust SVD. `rajiveplus` moves that bottleneck into C++ through
-RcppArmadillo, while the original
-[RaJIVE](https://github.com/ericaponzi/RaJIVE) package keeps the computation in
-pure R.
+The package vignette is deliberately light. It checks that the current
+`rajiveplus` runtime path can be compared with a locally installed copy of the
+original `RaJIVE` package, but it does not run the full benchmark grid.
 
-The useful benchmark is therefore not abstract. It is: when does that C++
-implementation change the working scale of an analysis? We look along five
-axes:
+The full benchmark artifact lives in `benchmarking_heavy.Rmd` and is rendered
+only by SLURM after this package-vignette suite succeeds. That heavy artifact
+regenerates the cache files used for release notes and performance inspection:
 
-| Benchmark | Varies | Fixed |
-|-----------|--------|-------|
-| Head-to-head timing | implementation | K=2, n=100, p=500, joint_rank=2 |
-| Scaling vs n | n in {50,100,200} | p=500 |
-| Scaling vs p | p in {100,500,1000,2000} | n=100 |
-| Parallelism (rajiveplus only) | num_cores in {1,2,4} | n=200, p=1000 |
-| Peak memory | implementation | K=2, n=100, p=500 |
-
-Two details keep the comparison honest. First, every benchmark fixes
-`joint_rank = 2`, so we time the decomposition rather than stochastic rank
-selection. Second, `RaJIVE` registers two parallel workers internally, so the
-head-to-head runs give `rajiveplus` the same two-core budget.
-
-This is a timing vignette, not an interpretation vignette. Helpers such as
-`extract_components()`, `plot_components()`, `associate_components()`, and
-`assess_stability()` appear in the application vignettes where their outputs
-matter scientifically.
-
----
+```{r cache-status}
+cache_files <- c(
+  "bench_results.rds",
+  "bench_results_bench.rds",
+  "scaling_results.rds",
+  "parallel_results.rds",
+  "peakram_single.rds"
+)
+cache_paths <- file.path(data_dir, cache_files)
+cache_status <- data.frame(
+  file = cache_files,
+  present = file.exists(cache_paths),
+  modified = ifelse(file.exists(cache_paths),
+                    format(file.info(cache_paths)$mtime, "%Y-%m-%d %H:%M"),
+                    NA_character_),
+  stringsAsFactors = FALSE
+)
+knitr::kable(cache_status, caption = "Heavy benchmark cache status")
+```
 
 ## Setup
 
-Install the reference implementation if it is not already available:
+This vignette does not install packages from the network. The SLURM render node
+must already have the local benchmark dependencies available.
 
-```{r}
-if (!requireNamespace("RaJIVE", quietly = TRUE))
-  remotes::install_github("ericaponzi/RaJIVE")
-```
+```{r setup}
+required <- c("rajiveplus", "RaJIVE", "ggplot2")
+missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing) > 0L) {
+  stop(
+    "Missing local package(s) required for the benchmark smoke test: ",
+    paste(missing, collapse = ", "),
+    ". Install them in the R4_51 environment before rendering this vignette.",
+    call. = FALSE
+  )
+}
 
-
-
-
-Both packages export a function named `Rajive()`. The benchmark code therefore
-uses explicit namespaces whenever the two implementations are compared.
-
-```{r}
 library(rajiveplus)
-library(microbenchmark)
-library(bench)
-library(peakRAM)
 library(ggplot2)
 ```
 
+Both packages export a function named `Rajive()`, so the comparison uses
+explicit namespaces. The `rajiveplus` call uses `identifiability_norm = "l1"`
+only for parity with the original implementation's post-selection filter.
 
+## Tiny smoke benchmark
 
+The data set is intentionally small: two blocks, 40 samples, and 60 features
+per block. This is not a performance claim; it is a fast integration check that
+both implementations can run on the current SLURM software stack.
 
-We also register one two-worker `doParallel` cluster before benchmarking. That
-keeps worker start-up from masquerading as algorithmic cost.
-
-```{r}
-doParallel::registerDoParallel(2L)
-```
-
-
-
-
-The main benchmark data set has two blocks, 100 samples, and 500 features per
-block:
-
-```{r}
+```{r smoke-data}
 set.seed(42)
-Y      <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
-                         n = 100, pks = c(500, 500))
+Y <- ajive.data.sim(K = 2, rankJ = 1L, rankA = c(2L, 2L),
+                    n = 40L, pks = c(60L, 60L), dist.type = 1)
 blocks <- Y$sim_data
 ```
 
-
-
-
----
-
-## First look
-
-Before the formal summaries, a single run gives the scale of the difference.
-
-```{r}
-t_ru <- system.time(
-  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE,
-                     num_cores = 2L, identifiability_norm = "l1")
-)
-t_rj <- system.time(
-  RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE)
-)
-cat("rajiveplus:", round(t_ru["elapsed"], 2), "s\n")
-cat("RaJIVE:     ", round(t_rj["elapsed"], 2), "s\n")
-cat("Speedup:    ", round(t_rj["elapsed"] / t_ru["elapsed"], 1), "x\n")
-```
-
-
-
-
----
-
-## Repeated timing
-
-Five repeated runs are enough to show the timing distribution without turning
-the vignette into a compute job.
-
-```{r}
-bm_mb <- microbenchmark(
-  rajiveplus = rajiveplus::Rajive(blocks, c(5, 5),
-                                   joint_rank = 2L, full = FALSE,
-                                   num_cores = 2L, identifiability_norm = "l1"),
-  RaJIVE      = RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE),
-  times       = 5L
-)
-saveRDS(bm_mb, file.path(data_dir, "bench_results.rds"))
-```
-
-```{r}
-bm_mb <- readRDS(file.path(data_dir, "bench_results.rds"))
-print(bm_mb, unit = "s", order = "median")
-```
-
-```{r}
-autoplot(bm_mb) +
-  labs(title = "microbenchmark: rajiveplus vs RaJIVE",
-       subtitle = "K=2, n=100, p=500, joint_rank=2, num_cores=2, 5 reps",
-       x = "Time (ms)", y = NULL) +
-  theme_bw()
-```
-
-
-
-
----
-
-## bench::mark comparison
-
-`bench::mark` adds medians and spread. Its memory column measures R-level
-allocations only, so native Armadillo allocations are addressed later with
-`peakRAM`.
-
-```{r}
-bm_bench <- bench::mark(
-  rajiveplus = rajiveplus::Rajive(blocks, c(5, 5),
-                                   joint_rank = 2L, full = FALSE,
-                                   num_cores = 2L, identifiability_norm = "l1"),
-  RaJIVE      = RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE),
-  iterations  = 3L,
-  check       = FALSE,
-  memory      = FALSE
-)
-saveRDS(bm_bench, file.path(data_dir, "bench_results_bench.rds"))
-```
-
-```{r}
-bm_bench <- readRDS(file.path(data_dir, "bench_results_bench.rds"))
-knitr::kable(
-  summary(bm_bench)[, c("expression", "min", "median", "mem_alloc", "n_itr")],
-  caption = "bench::mark results (3 iterations)"
-)
-```
-
-```{r}
-plot(bm_bench) +
-  labs(title = "bench::mark: rajiveplus vs RaJIVE",
-       subtitle = "R-heap allocations only; see peakRAM for total RSS") +
-  theme_bw()
-```
-
-
-
-
----
-
-## Scaling with samples and features
-
-```{r}
-ns <- c(50L, 100L, 200L)
-
-scaling_n_rows <- lapply(ns, function(n_i) {
-  set.seed(42)
-  Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
-                           n = n_i, pks = c(500, 500))
-  blks_i <- Y_i$sim_data
-  t_ru   <- system.time(rajiveplus::Rajive(blks_i, c(5, 5),
-                                            joint_rank = 2L, full = FALSE,
-                                            num_cores = 2L,
-                                            identifiability_norm = "l1"))["elapsed"]
-  t_rj   <- system.time(RaJIVE::Rajive(blks_i, c(5, 5), joint_rank = 2L, full = FALSE))["elapsed"]
-  data.frame(n = n_i, rajiveplus = t_ru, RaJIVE = t_rj)
-})
-scaling_n_df <- do.call(rbind, scaling_n_rows)
-```
-
-```{r}
-ps <- c(100L, 500L, 1000L, 2000L)
-
-scaling_p_rows <- lapply(ps, function(p_i) {
-  set.seed(42)
-  Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
-                           n = 100, pks = c(p_i, p_i))
-  blks_i <- Y_i$sim_data
-  t_ru   <- system.time(rajiveplus::Rajive(blks_i, c(5, 5),
-                                            joint_rank = 2L, full = FALSE,
-                                            num_cores = 2L,
-                                            identifiability_norm = "l1"))["elapsed"]
-  t_rj   <- system.time(RaJIVE::Rajive(blks_i, c(5, 5), joint_rank = 2L, full = FALSE))["elapsed"]
-  data.frame(p = p_i, rajiveplus = t_ru, RaJIVE = t_rj)
-})
-scaling_p_df <- do.call(rbind, scaling_p_rows)
-
-saveRDS(list(vs_n = scaling_n_df, vs_p = scaling_p_df),
-        file.path(data_dir, "scaling_results.rds"))
-```
-
-```{r}
-scaling      <- readRDS(file.path(data_dir, "scaling_results.rds"))
-scaling_n_df <- scaling$vs_n
-scaling_p_df <- scaling$vs_p
-```
-
-```{r}
-df_n_long <- reshape(scaling_n_df,
-                     varying   = c("rajiveplus", "RaJIVE"),
-                     v.names   = "elapsed",
-                     timevar   = "package",
-                     times     = c("rajiveplus", "RaJIVE"),
-                     direction = "long")
-
-ggplot(df_n_long, aes(x = n, y = elapsed, colour = package, group = package)) +
-  geom_line(linewidth = 1) + geom_point(size = 2.5) +
-  scale_colour_manual(values = c(rajiveplus = "#2166ac", RaJIVE = "#d6604d")) +
-  labs(title = "Elapsed time vs sample size (n)",
-       subtitle = "K=2, p=500, joint_rank=2, num_cores=2",
-       x = "Sample size (n)", y = "Elapsed time (s)", colour = NULL) +
-  theme_bw()
-```
-
-```{r}
-df_p_long <- reshape(scaling_p_df,
-                     varying   = c("rajiveplus", "RaJIVE"),
-                     v.names   = "elapsed",
-                     timevar   = "package",
-                     times     = c("rajiveplus", "RaJIVE"),
-                     direction = "long")
-
-ggplot(df_p_long, aes(x = p, y = elapsed, colour = package, group = package)) +
-  geom_line(linewidth = 1) + geom_point(size = 2.5) +
-  scale_x_log10() +
-  scale_colour_manual(values = c(rajiveplus = "#2166ac", RaJIVE = "#d6604d")) +
-  labs(title = "Elapsed time vs feature count (p)",
-       subtitle = "K=2, n=100, joint_rank=2, num_cores=2 (log x-axis)",
-       x = "Features per block (p)", y = "Elapsed time (s)", colour = NULL) +
-  theme_bw()
-```
-
-```{r}
-speedup_df <- data.frame(
-  p       = scaling_p_df$p,
-  speedup = round(scaling_p_df$RaJIVE / scaling_p_df$rajiveplus, 1)
-)
-knitr::kable(speedup_df,
-             col.names = c("p (features per block)", "Speedup (x)"),
-             caption   = "rajiveplus speedup over RaJIVE by feature count")
-```
-
-
-
-
----
-
-## What do extra cores buy?
-
-`rajiveplus` can spread work across cores through `parallel::mclapply`. Here
-we ask whether that matters on a larger example with 200 samples and 1000
-features per block.
-
-```{r}
-set.seed(42)
-Y_par    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
-                           n = 200, pks = c(1000, 1000))
-blks_par <- Y_par$sim_data
-
-parallel_rows <- lapply(c(1L, 2L, 4L), function(nc) {
-  t_i <- system.time(
-    rajiveplus::Rajive(blks_par, c(5, 5), joint_rank = 2L, full = FALSE,
-                       num_cores = nc, identifiability_norm = "l1")
-  )["elapsed"]
-  data.frame(num_cores = nc, elapsed = t_i)
-})
-parallel_df         <- do.call(rbind, parallel_rows)
-parallel_df$speedup <- parallel_df$elapsed[1] / parallel_df$elapsed
-
-saveRDS(parallel_df, file.path(data_dir, "parallel_results.rds"))
-```
-
-```{r}
-parallel_df <- readRDS(file.path(data_dir, "parallel_results.rds"))
-knitr::kable(parallel_df, digits = 2,
-             col.names = c("num_cores", "Elapsed (s)", "Speedup (x)"),
-             caption   = "rajiveplus parallelism scaling (n=200, p=1000)")
-```
-
-```{r}
-p1 <- ggplot(parallel_df, aes(x = num_cores, y = elapsed)) +
-  geom_line(colour = "#2166ac", linewidth = 1) +
-  geom_point(size = 2.5, colour = "#2166ac") +
-  labs(title = "Elapsed time vs num_cores",
-       x = "num_cores", y = "Elapsed time (s)") +
-  theme_bw()
-
-p2 <- ggplot(parallel_df, aes(x = num_cores, y = speedup)) +
-  geom_line(colour = "#1b7837", linewidth = 1) +
-  geom_point(size = 2.5, colour = "#1b7837") +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed", colour = "grey50") +
-  labs(title = "Speedup vs num_cores",
-       subtitle = "Dashed = ideal linear speedup",
-       x = "num_cores", y = "Speedup (x)") +
-  theme_bw()
-
-if (requireNamespace("patchwork", quietly = TRUE)) {
-  print(patchwork::wrap_plots(p1, p2, ncol = 2))
-} else {
-  print(p1); print(p2)
+```{r smoke-run}
+elapsed <- function(expr) {
+  unname(system.time(force(expr))[["elapsed"]])
 }
+
+t_ru <- elapsed(
+  rajiveplus::Rajive(
+    blocks, c(2L, 2L),
+    joint_rank = 1L,
+    full = FALSE,
+    n_wedin_samples = NA,
+    n_rand_dir_samples = NA,
+    num_cores = 1L,
+    seed = 42L,
+    identifiability_norm = "l1"
+  )
+)
+
+t_rj <- elapsed(
+  RaJIVE::Rajive(blocks, c(2L, 2L), joint_rank = 1L, full = FALSE)
+)
+
+timings <- data.frame(
+  package = c("rajiveplus", "RaJIVE"),
+  elapsed_s = c(t_ru, t_rj),
+  stringsAsFactors = FALSE
+)
+knitr::kable(timings, digits = 3, caption = "Tiny smoke benchmark")
 ```
 
-
-
-
----
-
-## Memory footprint
-
-Speed is only half the story. The C++ RobustSVD allocates through Armadillo, so
-R's heap counters miss part of the footprint. `peakRAM` watches the process at
-the operating-system level and gives the fairer comparison.
-
-```{r}
-mem_ru <- peakRAM::peakRAM(
-  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE,
-                     num_cores = 2L, identifiability_norm = "l1")
-)
-mem_rj <- peakRAM::peakRAM(
-  RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE)
-)
-peakram_df <- data.frame(
-  package     = c("rajiveplus", "RaJIVE"),
-  peak_ram_mb = c(mem_ru$Peak_RAM_Used_MiB, mem_rj$Peak_RAM_Used_MiB),
-  elapsed_s   = c(mem_ru$Elapsed_Time_sec,  mem_rj$Elapsed_Time_sec)
-)
-saveRDS(peakram_df, file.path(data_dir, "peakram_single.rds"))
-```
-
-```{r}
-peakram_df <- readRDS(file.path(data_dir, "peakram_single.rds"))
-knitr::kable(peakram_df,
-             col.names = c("Package", "Peak RAM (MiB)", "Elapsed (s)"),
-             digits    = 1,
-             caption   = "Peak RSS memory (peakRAM); includes C++ heap allocations")
-```
-
-```{r}
-ggplot(peakram_df, aes(x = package, y = peak_ram_mb, fill = package)) +
-  geom_col(width = 0.5) +
+```{r smoke-plot}
+ggplot(timings, aes(x = package, y = elapsed_s, fill = package)) +
+  geom_col(width = 0.55) +
   scale_fill_manual(values = c(rajiveplus = "#2166ac", RaJIVE = "#d6604d")) +
-  labs(title  = "Peak RAM usage (peakRAM)",
-       subtitle = "K=2, n=100, p=500, joint_rank=2, num_cores=2",
-       x = NULL, y = "Peak RAM (MiB)") +
-  theme_bw() + theme(legend.position = "none")
+  labs(title = "Tiny smoke benchmark",
+       subtitle = "K=2, n=40, p=60, joint_rank=1",
+       x = NULL, y = "Elapsed time (s)") +
+  theme_bw() +
+  theme(legend.position = "none")
 ```
 
+```{r smoke-ratio}
+cat("Smoke-test speedup:", round(t_rj / t_ru, 1), "x\n")
+```
 
+## Heavy benchmark handoff
 
+The heavy SLURM render runs the repeated timings, scaling sweeps, parallel
+scaling, and peak-memory comparison. It should be submitted with an `afterok`
+dependency on the light vignette array so expensive benchmarking starts only
+after this smoke test and the other package vignettes are green.
 
-> **Why peakRAM?** `bench::mark` reports R-heap allocation. The native heap used
-> by Armadillo and LAPACK is outside that accounting. `peakRAM` captures the
-> process-level resident set size, which is the memory pressure the scheduler
-> sees.
-
----
-
-## Session Info
-
-```{r}
+```{r session-info}
 sessionInfo()
 ```

@@ -8,12 +8,12 @@
 #SBATCH --output=logs/slurm_bench_%j.log
 #SBATCH --error=logs/slurm_bench_%j.log
 
-cd /exports/para-lipg-hpc/mdmanurung/rajiveplus
+cd /exports/para-lipg-hpc/mdmanurung/RaJIVEutils
 
 source /exports/archive/hg-funcgenom-research/mdmanurung/conda/etc/profile.d/conda.sh
 conda activate R4_51
 
 /exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript \
-  -e "rmarkdown::render('vignettes/benchmarking.Rmd')"
+  -e "rmarkdown::render('vignettes/benchmarking_heavy.Rmd', output_format = 'rmarkdown::html_document', output_file = 'benchmarking_heavy.html', output_dir = 'logs/vignette_renders', clean = TRUE)"
 
 echo "EXIT CODE: $?"

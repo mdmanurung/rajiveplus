@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   message    = FALSE,
   warning    = FALSE
 )
-run_heavy <- FALSE   # set to TRUE once to regenerate all cached .rds files
+run_heavy <- identical(Sys.getenv("RAJIVEPLUS_VIGNETTE_HEAVY"), "1")
 data_dir  <- "data"
 ```
 
@@ -47,7 +47,7 @@ output, then say what scientific question the output can answer.
 | Component extractors | `get_joint_scores`, `get_block_scores`, `get_block_loadings`, `get_block_matrix` |
 | Diagnostic extraction | `extract_components` (5 `what` modes) |
 | Decomposition visualization | `data_heatmap`, `decomposition_heatmaps_robustH` |
-| Variance explained | `showVarExplained_robust`, `plot_variance_explained` |
+| Variance explained | `joint_variance_partition`, `plot_variance_explained`, `showVarExplained_robust` |
 | Score plots | `plot_scores`, `plot_components` (`pairs`, `density`) |
 | AJIVE diagnostic plots | `plot_components` (`rank_threshold`, `bound_distributions`, `ajive_diagnostic`) |
 | Feature visualization | `plot_components` (`top_features`, `component_heatmap`) |
@@ -99,7 +99,8 @@ fit <- Rajive(
   blocks               = blocks,
   initial_signal_ranks = c(5L, 4L, 4L),
   n_wedin_samples      = 200L,
-  n_rand_dir_samples   = 200L
+  n_rand_dir_samples   = 200L,
+  seed                 = 2L
 )
 
 set.seed(42)
@@ -111,11 +112,14 @@ assoc_cont <- associate_components(fit, meta_df, variable = "score_cont",
                                    mode = "continuous")
 
 stab_rank <- assess_stability(fit, blocks, c(5L, 4L, 4L),
-                              target = "joint_rank", B = 5L)
+                              target = "joint_rank", B = 5L,
+                              seed = 12L)
 stab_load <- assess_stability(fit, blocks, c(5L, 4L, 4L),
-                              target = "loadings",   B = 5L)
+                              target = "loadings",   B = 5L,
+                              seed = 13L)
 stab_comp <- assess_stability(fit, blocks, c(5L, 4L, 4L),
-                              target = "components", B = 5L)
+                              target = "components", B = 5L,
+                              seed = 14L)
 
 dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
 saveRDS(
@@ -189,7 +193,8 @@ fit_demo <- Rajive(
   n_wedin_samples      = 200L,
   n_rand_dir_samples   = 200L,
   joint_rank           = NA,
-  num_cores            = 1L
+  num_cores            = 1L,
+  seed                 = 2L
 )
 ```
 
@@ -240,7 +245,8 @@ fit_perm <- Rajive(
   n_wedin_samples      = 200L,
   n_perm_samples       = 200L,   # replaces random-direction bound
   joint_rank           = NA,
-  num_cores            = 1L
+  num_cores            = 1L,
+  seed                 = 42L
 )
 
 # Inspect the permutation null
@@ -512,7 +518,23 @@ the noise panels should be comparatively featureless.
 
 # 8  Variance Explained
 
+## `joint_variance_partition()`
+
+```{r}
+vp <- joint_variance_partition(fit, blocks)
+knitr::kable(head(vp[, c("block", "feature", "joint_prop",
+                         "individual_prop", "residual_prop")]),
+             digits = 3,
+             caption = "Feature-level variance partition")
+```
+
+
+---
+
 ## `showVarExplained_robust()`
+
+This compatibility helper returns the historical block-level variance list.
+Use `joint_variance_partition()` when feature-level accounting is needed.
 
 ```{r}
 var_list <- showVarExplained_robust(fit, blocks)

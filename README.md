@@ -576,8 +576,9 @@ knitr::include_graphics("man/figures/README-jackstraw-loadings-significance.png"
 - **Vignettes** (under `vignettes/` and on the package website):
   - `function_gallery` — short, runnable demos of every exported
     function.
-  - `benchmarking` — runtime / memory comparison vs the original
-    `RaJIVE` package.
+  - `benchmarking` — light SLURM smoke test for the runtime comparison.
+    The full runtime / memory benchmark is rendered separately from
+    `vignettes/benchmarking_heavy.Rmd`.
   - `jackstraw_scaling` — practical guide to choosing `n_null` for
     `jackstraw_rajive()`.
   - `cll_application` — end-to-end multi-omics integration on the CLL

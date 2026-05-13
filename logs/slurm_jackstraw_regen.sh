@@ -23,11 +23,6 @@ export BLIS_NUM_THREADS=1
 R_BIN="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/R"
 R_SCRIPT="/exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript"
 
-cleanup() {
-  perl -0pi -e 's/run_heavy <- TRUE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- FALSE  # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd || true
-}
-trap cleanup EXIT
-
 # Install package (retry up to 3 times to handle concurrent lock from bench job).
 for i in 1 2 3; do
   rm -rf /exports/para-lipg-hpc/mdmanurung/R/4.5/00LOCK-RaJIVEutils 2>/dev/null || true
@@ -36,8 +31,6 @@ for i in 1 2 3; do
   sleep 60
 done
 
-perl -0pi -e 's/run_heavy <- FALSE\s+# set to TRUE once to regenerate \.rds cache files/run_heavy <- TRUE   # set to TRUE once to regenerate .rds cache files/g' vignettes/jackstraw_scaling.Rmd
-
-"${R_SCRIPT}" -e "rmarkdown::render('vignettes/jackstraw_scaling.Rmd')"
+RAJIVEPLUS_VIGNETTE_HEAVY=1 "${R_SCRIPT}" -e "rmarkdown::render('vignettes/jackstraw_scaling.Rmd')"
 
 echo "EXIT CODE: $?"

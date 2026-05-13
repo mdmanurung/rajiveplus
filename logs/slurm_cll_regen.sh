@@ -27,11 +27,6 @@ export MKL_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export BLIS_NUM_THREADS=1
 
-cleanup() {
-  perl -0pi -e 's/run_heavy <- TRUE\s+# set to FALSE after \.rds files are generated/run_heavy <- FALSE  # set to FALSE after .rds files are generated/g' vignettes/cll_application.Rmd || true
-}
-trap cleanup EXIT
-
 # Install package (retry up to 3 times to handle concurrent lock from bench job).
 for i in 1 2 3; do
   rm -rf /exports/para-lipg-hpc/mdmanurung/R/4.5/00LOCK-RaJIVEutils 2>/dev/null || true
@@ -56,8 +51,6 @@ if (length(miss) > 0) install.packages(miss, repos = 'https://cloud.r-project.or
 cat('Dependency check done\n')
 "
 
-perl -0pi -e 's/run_heavy <- FALSE\s+# set to FALSE after \.rds files are generated/run_heavy <- TRUE   # set to FALSE after .rds files are generated/g' vignettes/cll_application.Rmd
-
-"${R_SCRIPT}" -e "rmarkdown::render('vignettes/cll_application.Rmd')"
+RAJIVEPLUS_VIGNETTE_HEAVY=1 "${R_SCRIPT}" -e "rmarkdown::render('vignettes/cll_application.Rmd')"
 
 echo "EXIT CODE: $?"

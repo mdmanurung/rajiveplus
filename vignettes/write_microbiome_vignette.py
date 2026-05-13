@@ -184,9 +184,11 @@ plot_variance_explained(mb_fit, blocks) +
 ```
 
 ```{r var-table}
-ve_tbl <- showVarExplained_robust(mb_fit, blocks)
-if (is.data.frame(ve_tbl)) knitr::kable(ve_tbl, digits = 3,
-  caption = "Proportion of variance explained")
+ve_tbl <- summarize_components(ajive_output = mb_fit,
+                               blocks = blocks,
+                               summary_type = "variance")
+knitr::kable(ve_tbl, digits = 3,
+             caption = "Proportion of variance explained")
 ```
 
 # Joint scores
@@ -473,7 +475,7 @@ message("    -> saved microbiome_svd_list.rds")
 
 # ---- 4. Fit RaJIVE ----------------------------------------------------------
 message("[4/6] Fitting Rajive() model...")
-mb_fit <- Rajive(blocks, initial_signal_ranks = init_ranks)
+mb_fit <- Rajive(blocks, initial_signal_ranks = init_ranks, seed = 42L)
 jr <- get_joint_rank(mb_fit)
 message("    Estimated joint rank: ", jr)
 saveRDS(mb_fit, file.path(out_dir, "microbiome_rajive_results.rds"))
@@ -493,7 +495,8 @@ stab <- assess_stability(
   initial_signal_ranks = init_ranks,
   target              = "joint_rank",
   B                   = 30L,
-  sample_frac         = 0.8)
+  sample_frac         = 0.8,
+  seed                = 43L)
 saveRDS(stab, file.path(out_dir, "microbiome_stability.rds"))
 message("    -> saved microbiome_stability.rds")
 message("All 6 cache files generated successfully.")

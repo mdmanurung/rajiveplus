@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   message   = FALSE,
   warning   = FALSE
 )
-run_heavy <- FALSE  # set to TRUE once to regenerate .rds cache files
+run_heavy <- identical(Sys.getenv("RAJIVEPLUS_VIGNETTE_HEAVY"), "1")
 data_dir  <- "data"
 ```
 
@@ -69,7 +69,8 @@ time_n_rows <- lapply(ns, function(n_i) {
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                            n = n_i, pks = c(500, 500))
   blks_i <- Y_i$sim_data
-  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L, num_cores = 2L)
+  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L,
+                   num_cores = 2L, seed = 42L)
   t_i    <- system.time(
     jackstraw_rajive(fit_i, blks_i, n_null = 10L)
   )["elapsed"]
@@ -111,7 +112,8 @@ time_p_rows <- lapply(ps, function(p_i) {
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                            n = 100, pks = c(p_i, p_i))
   blks_i <- Y_i$sim_data
-  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L, num_cores = 2L)
+  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L,
+                   num_cores = 2L, seed = 42L)
   t_i    <- system.time(
     jackstraw_rajive(fit_i, blks_i, n_null = 10L)
   )["elapsed"]
@@ -156,7 +158,8 @@ set.seed(42)
 Y_base    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                              n = 100, pks = c(500, 500))
 blks_base <- Y_base$sim_data
-fit_base  <- Rajive(blks_base, c(5, 5), joint_rank = 2L, num_cores = 2L)
+fit_base  <- Rajive(blks_base, c(5, 5), joint_rank = 2L,
+                    num_cores = 2L, seed = 42L)
 
 time_nnull_rows <- lapply(nnulls, function(nn) {
   t_i <- system.time(
@@ -198,7 +201,8 @@ ram_n_rows <- lapply(c(50L, 100L, 200L), function(n_i) {
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                            n = n_i, pks = c(500, 500))
   blks_i <- Y_i$sim_data
-  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L, num_cores = 2L)
+  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L,
+                   num_cores = 2L, seed = 42L)
   mem_i  <- peakRAM::peakRAM(jackstraw_rajive(fit_i, blks_i, n_null = 10L))
   data.frame(n = n_i, peak_ram_mb = mem_i$Peak_RAM_Used_MiB)
 })
@@ -212,7 +216,8 @@ ram_p_rows <- lapply(c(100L, 500L, 1000L, 2000L), function(p_i) {
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                            n = 100, pks = c(p_i, p_i))
   blks_i <- Y_i$sim_data
-  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L, num_cores = 2L)
+  fit_i  <- Rajive(blks_i, c(5, 5), joint_rank = 2L,
+                   num_cores = 2L, seed = 42L)
   mem_i  <- peakRAM::peakRAM(jackstraw_rajive(fit_i, blks_i, n_null = 10L))
   data.frame(p = p_i, peak_ram_mb = mem_i$Peak_RAM_Used_MiB)
 })
@@ -261,7 +266,8 @@ if (requireNamespace("profmem", quietly = TRUE)) {
   Y_tiny    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(3, 3),
                                n = 50, pks = c(100, 100))
   blks_tiny <- Y_tiny$sim_data
-  fit_tiny  <- Rajive(blks_tiny, c(3, 3), joint_rank = 2L, num_cores = 1L)
+  fit_tiny  <- Rajive(blks_tiny, c(3, 3), joint_rank = 2L,
+                      num_cores = 1L, seed = 42L)
 
   pm <- profmem::profmem(jackstraw_rajive(fit_tiny, blks_tiny, n_null = 5L))
 
@@ -296,7 +302,8 @@ if (requireNamespace("profvis", quietly = TRUE)) {
   Y_pv  <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
                            n = 100, pks = c(500, 500))
   blks_pv <- Y_pv$sim_data
-  fit_pv  <- Rajive(blks_pv, c(5, 5), joint_rank = 2L, num_cores = 2L)
+  fit_pv  <- Rajive(blks_pv, c(5, 5), joint_rank = 2L,
+                    num_cores = 2L, seed = 42L)
   profvis::profvis(jackstraw_rajive(fit_pv, blks_pv, n_null = 10L))
 }
 ```
