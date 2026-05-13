@@ -82,6 +82,25 @@
   invisible(TRUE)
 }
 
+.refit_dots_with_identifiability_norm <- function(dots, ajive_output = NULL) {
+  if (!is.null(dots$identifiability_norm)) {
+    dots$identifiability_norm <- .match_identifiability_norm(
+      dots$identifiability_norm
+    )
+    return(dots)
+  }
+
+  norm <- NULL
+  if (!is.null(ajive_output) && !is.null(ajive_output$joint_rank_sel)) {
+    norm <- ajive_output$joint_rank_sel$identifiability_norm
+  }
+  if (is.null(norm) || length(norm) != 1L || is.na(norm)) {
+    norm <- "l2"
+  }
+  dots$identifiability_norm <- .match_identifiability_norm(norm)
+  dots
+}
+
 .extract_score_matrix <- function(fit, score_type = c("joint", "individual"),
                                   score_block = NULL) {
   score_type <- match.arg(score_type)
@@ -247,11 +266,12 @@
     out$var_explained <- array(NA_real_, dim = c(K, n_comp, B))
   }
 
-  dots <- list(...)
-  dots$num_cores <- max(1L, as.integer(num_cores))
+  dots <- .refit_dots_with_identifiability_norm(list(...), ajive_output)
+  outer_num_cores <- max(1L, as.integer(num_cores))
+  dots$num_cores <- 1L
   rank_only_refit <- all(keep %in% c("joint_rank", "indices"))
   fit_fun <- if (rank_only_refit) .Rajive_rank_only else Rajive
-  for (b in seq_len(B)) {
+  replicate_results <- .rajive_parallel_lapply(seq_len(B), function(b) {
     idx <- .bootstrap_resample_indices(
       n = n_ref,
       sample_frac = sample_frac,
@@ -266,9 +286,9 @@
       error = function(e) NULL
     )
 
-    if ("indices" %in% keep) out$indices[[b]] <- idx
-    if (is.null(fit_b)) next
-    if ("joint_rank" %in% keep) out$joint_rank[[b]] <- fit_b$joint_rank
+    res <- list(indices = idx)
+    if (is.null(fit_b)) return(res)
+    res$joint_rank <- fit_b$joint_rank
 
     bs <- .extract_score_matrix(fit_b, score_type, score_block)
     if (any(keep %in% c("scores", "component_cors")) &&
@@ -283,21 +303,28 @@
       if (!is.null(aligned)) {
         n_use <- aligned$n_use
         if ("scores" %in% keep) {
-          out$scores[, seq_len(n_use), b] <- aligned$scores
+          scores_b <- matrix(NA_real_, nrow = n_ref, ncol = n_comp)
+          scores_b[, seq_len(n_use)] <- aligned$scores
+          res$scores <- scores_b
         }
         if ("component_cors" %in% keep) {
+          component_cors_b <- rep(NA_real_, n_comp)
           for (j in seq_len(n_use)) {
-            out$component_cors[b, j] <- suppressWarnings(abs(stats::cor(
+            component_cors_b[[j]] <- suppressWarnings(abs(stats::cor(
               ref_scores[idx, j], aligned$sample_scores[, j],
               use = "pairwise.complete.obs"
             )))
           }
+          res$component_cors <- component_cors_b
         }
       }
     }
 
     if ("loadings" %in% keep && !is.null(fit_b$block_decomps) &&
         !is.null(ref_loadings)) {
+      loadings_b <- lapply(seq_len(K), function(k) {
+        matrix(NA_real_, nrow = ncol(blocks[[k]]), ncol = n_comp)
+      })
       for (k in seq_len(K)) {
         L_b <- fit_b$block_decomps[[3L * (k - 1L) + 2L]]$v
         if (is.null(L_b) || ncol(L_b) == 0L) next
@@ -307,12 +334,36 @@
           Q <- .procrustes_align(ref_loadings[[k]][, seq_len(n_use), drop = FALSE], L_sub)
           L_sub <- L_sub %*% Q
         }
-        out$loadings[[k]][, seq_len(n_use), b] <- L_sub
+        loadings_b[[k]][, seq_len(n_use)] <- L_sub
       }
+      res$loadings <- loadings_b
     }
 
     if ("var_explained" %in% keep && !is.null(fit_b$block_decomps)) {
-      out$var_explained[, , b] <- .component_var_explained(fit_b, b_list, n_comp)
+      res$var_explained <- .component_var_explained(fit_b, b_list, n_comp)
+    }
+    res
+  }, num_cores = outer_num_cores)
+
+  for (b in seq_along(replicate_results)) {
+    res <- replicate_results[[b]]
+    if ("indices" %in% keep) out$indices[[b]] <- res$indices
+    if ("joint_rank" %in% keep && !is.null(res$joint_rank)) {
+      out$joint_rank[[b]] <- res$joint_rank
+    }
+    if ("scores" %in% keep && !is.null(res$scores)) {
+      out$scores[, , b] <- res$scores
+    }
+    if ("component_cors" %in% keep && !is.null(res$component_cors)) {
+      out$component_cors[b, ] <- res$component_cors
+    }
+    if ("loadings" %in% keep && !is.null(res$loadings)) {
+      for (k in seq_len(K)) {
+        out$loadings[[k]][, , b] <- res$loadings[[k]]
+      }
+    }
+    if ("var_explained" %in% keep && !is.null(res$var_explained)) {
+      out$var_explained[, , b] <- res$var_explained
     }
   }
 
@@ -346,9 +397,10 @@
   }
   out <- .bootstrap_score_targets(ajive_output, targets, B, n_ref)
 
-  dots <- list(...)
-  dots$num_cores <- max(1L, as.integer(num_cores))
-  for (b in seq_len(B)) {
+  dots <- .refit_dots_with_identifiability_norm(list(...), ajive_output)
+  outer_num_cores <- max(1L, as.integer(num_cores))
+  dots$num_cores <- 1L
+  replicate_results <- .rajive_parallel_lapply(seq_len(B), function(b) {
     idx <- .bootstrap_resample_indices(
       n = n_ref,
       sample_frac = sample_frac,
@@ -361,8 +413,9 @@
       do.call(Rajive, c(list(b_list, initial_signal_ranks), dots)),
       error = function(e) NULL
     )
-    if (is.null(fit_b)) next
+    if (is.null(fit_b)) return(vector("list", length(out)))
 
+    res <- vector("list", length(out))
     for (i in seq_along(out)) {
       target <- out[[i]]
       if (is.null(target)) next
@@ -376,7 +429,19 @@
         align_to = align_to
       )
       if (is.null(aligned)) next
-      out[[i]]$scores[, seq_len(aligned$n_use), b] <- aligned$scores
+      scores_b <- matrix(NA_real_, nrow = n_ref, ncol = ncol(target$ref_scores))
+      scores_b[, seq_len(aligned$n_use)] <- aligned$scores
+      res[[i]] <- scores_b
+    }
+    res
+  }, num_cores = outer_num_cores)
+
+  for (b in seq_along(replicate_results)) {
+    res <- replicate_results[[b]]
+    for (i in seq_along(out)) {
+      if (!is.null(res[[i]])) {
+        out[[i]]$scores[, , b] <- res[[i]]
+      }
     }
   }
 

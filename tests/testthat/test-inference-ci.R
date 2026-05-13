@@ -62,6 +62,39 @@ test_that("rajive_ci computes BCa intervals using jackknife refits", {
   expect_true(is.finite(out$upper))
 })
 
+test_that("jackknife refits inherit fitted identifiability_norm", {
+  fx <- make_small_rajive_fixture()
+  fx$fit$joint_rank_sel$identifiability_norm <- "l1"
+
+  seen <- character()
+  fake_fit <- function(b_list, initial_signal_ranks,
+                       identifiability_norm = NULL, ...) {
+    seen <<- c(seen, identifiability_norm)
+    structure(
+      list(
+        joint_rank = 1L,
+        joint_scores = matrix(seq_len(nrow(b_list[[1L]])), ncol = 1L)
+      ),
+      class = "rajive"
+    )
+  }
+
+  testthat::with_mocked_bindings(
+    rajiveplus:::.rajive_jackknife(
+      fx$fit,
+      fx$blocks,
+      fx$initial_signal_ranks,
+      target = "joint_rank",
+      joint_rank = 1L,
+      n_wedin_samples = NA,
+      n_rand_dir_samples = NA
+    ),
+    Rajive = fake_fit
+  )
+
+  expect_equal(seen, rep("l1", nrow(fx$blocks[[1L]])))
+})
+
 test_that("rajive_ci rejects BCa for sample-specific scores", {
   fx <- make_small_rajive_fixture()
 

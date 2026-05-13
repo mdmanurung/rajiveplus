@@ -113,7 +113,8 @@ Before the formal summaries, a single run gives the scale of the difference.
 
 ```{r}
 t_ru <- system.time(
-  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE, num_cores = 2L)
+  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE,
+                     num_cores = 2L, identifiability_norm = "l1")
 )
 t_rj <- system.time(
   RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE)
@@ -136,7 +137,8 @@ the vignette into a compute job.
 ```{r}
 bm_mb <- microbenchmark(
   rajiveplus = rajiveplus::Rajive(blocks, c(5, 5),
-                                   joint_rank = 2L, full = FALSE, num_cores = 2L),
+                                   joint_rank = 2L, full = FALSE,
+                                   num_cores = 2L, identifiability_norm = "l1"),
   RaJIVE      = RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE),
   times       = 5L
 )
@@ -170,7 +172,8 @@ allocations only, so native Armadillo allocations are addressed later with
 ```{r}
 bm_bench <- bench::mark(
   rajiveplus = rajiveplus::Rajive(blocks, c(5, 5),
-                                   joint_rank = 2L, full = FALSE, num_cores = 2L),
+                                   joint_rank = 2L, full = FALSE,
+                                   num_cores = 2L, identifiability_norm = "l1"),
   RaJIVE      = RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE),
   iterations  = 3L,
   check       = FALSE,
@@ -210,7 +213,9 @@ scaling_n_rows <- lapply(ns, function(n_i) {
                            n = n_i, pks = c(500, 500))
   blks_i <- Y_i$sim_data
   t_ru   <- system.time(rajiveplus::Rajive(blks_i, c(5, 5),
-                                            joint_rank = 2L, full = FALSE, num_cores = 2L))["elapsed"]
+                                            joint_rank = 2L, full = FALSE,
+                                            num_cores = 2L,
+                                            identifiability_norm = "l1"))["elapsed"]
   t_rj   <- system.time(RaJIVE::Rajive(blks_i, c(5, 5), joint_rank = 2L, full = FALSE))["elapsed"]
   data.frame(n = n_i, rajiveplus = t_ru, RaJIVE = t_rj)
 })
@@ -226,7 +231,9 @@ scaling_p_rows <- lapply(ps, function(p_i) {
                            n = 100, pks = c(p_i, p_i))
   blks_i <- Y_i$sim_data
   t_ru   <- system.time(rajiveplus::Rajive(blks_i, c(5, 5),
-                                            joint_rank = 2L, full = FALSE, num_cores = 2L))["elapsed"]
+                                            joint_rank = 2L, full = FALSE,
+                                            num_cores = 2L,
+                                            identifiability_norm = "l1"))["elapsed"]
   t_rj   <- system.time(RaJIVE::Rajive(blks_i, c(5, 5), joint_rank = 2L, full = FALSE))["elapsed"]
   data.frame(p = p_i, rajiveplus = t_ru, RaJIVE = t_rj)
 })
@@ -306,7 +313,8 @@ blks_par <- Y_par$sim_data
 
 parallel_rows <- lapply(c(1L, 2L, 4L), function(nc) {
   t_i <- system.time(
-    rajiveplus::Rajive(blks_par, c(5, 5), joint_rank = 2L, full = FALSE, num_cores = nc)
+    rajiveplus::Rajive(blks_par, c(5, 5), joint_rank = 2L, full = FALSE,
+                       num_cores = nc, identifiability_norm = "l1")
   )["elapsed"]
   data.frame(num_cores = nc, elapsed = t_i)
 })
@@ -360,7 +368,8 @@ the operating-system level and gives the fairer comparison.
 
 ```{r}
 mem_ru <- peakRAM::peakRAM(
-  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE, num_cores = 2L)
+  rajiveplus::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE,
+                     num_cores = 2L, identifiability_norm = "l1")
 )
 mem_rj <- peakRAM::peakRAM(
   RaJIVE::Rajive(blocks, c(5, 5), joint_rank = 2L, full = FALSE)

@@ -100,6 +100,8 @@
 #'       (95) or \code{NA_real_}.}
 #'     \item{\code{identif_dropped}}{Integer vector of component indices
 #'       dropped by the identifiability check (length 0 when none dropped).}
+#'     \item{\code{identifiability_norm}}{Norm used by the identifiability
+#'       filter, or \code{NA_character_} for legacy objects without the field.}
 #'     \item{\code{cutoff_rule}}{One of \code{"max(wedin, random)"},
 #'       \code{"max(wedin, perm)"}, \code{"wedin_only"},
 #'       \code{"random_only"}, \code{"perm_only"}, or
@@ -560,6 +562,8 @@ plot_components <- function(ajive_output = NULL,
 
   identif_dropped <- jrs[["identif_dropped"]]
   if (is.null(identif_dropped)) identif_dropped <- integer(0L)
+  identifiability_norm <- jrs[["identifiability_norm"]]
+  if (is.null(identifiability_norm)) identifiability_norm <- NA_character_
 
   payload <- list(
     obs_svals               = obs_svals,
@@ -576,6 +580,7 @@ plot_components <- function(ajive_output = NULL,
     rand_percentile         = rand_percentile,
     perm_percentile         = perm_percentile,
     identif_dropped         = identif_dropped,
+    identifiability_norm    = identifiability_norm,
     cutoff_rule             = cutoff_rule,
     has_wedin               = has_wedin,
     has_random              = has_random,
@@ -603,6 +608,7 @@ plot_components <- function(ajive_output = NULL,
     wedin_cutoff            = wedin_cutoff,
     rand_cutoff             = rand_cutoff,
     perm_cutoff             = perm_cutoff,
+    identifiability_norm    = identifiability_norm,
     stringsAsFactors        = FALSE
   )
 }

@@ -600,6 +600,11 @@ A few caveats worth keeping in mind when interpreting `Rajive()` output:
   the AJIVE reference implementation. The robust SVD is still used for
   every other step in the pipeline, including signal-block SVDs and the
   joint and individual decompositions.
+- **Identifiability filtering defaults to L2.** `Rajive()` compares
+  `X_k^T joint_score` to each block's singular-value threshold with an
+  L2 norm by default, matching the scale of the threshold. Use
+  `identifiability_norm = "l1"` when closer parity with original
+  RaJIVE's `norm(score)` behavior is needed.
 - **Component scores are estimates**, not fixed design variables.
   Downstream tests via `associate_components()` and `jackstraw_rajive()`
   do not propagate score-estimation uncertainty and should be treated as

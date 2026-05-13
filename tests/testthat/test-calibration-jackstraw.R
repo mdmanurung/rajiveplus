@@ -1,8 +1,9 @@
 # Slow calibration tests for jackstraw_rajive().
 #
-# Design note: Rajive() applies the original RaJIVE norm(score)
-# identifiability filter, dropping joint components whose projection onto a
-# block falls below that block's sv_threshold.
+# Design note: Rajive() applies an L2 identifiability filter by default,
+# dropping joint components whose projection onto a block falls below that
+# block's sv_threshold. Use identifiability_norm = "l1" for original RaJIVE
+# norm(score) parity.
 # On pure-noise data, this filter correctly drops even a forced joint_rank=1
 # component.  Tests therefore use ajive.data.sim() to generate blocks with
 # genuine dense joint signal (which passes the filter), then augment each

@@ -120,21 +120,27 @@ test_that("get_joint_decomposition_robustH reconstructs U U^T X", {
 })
 
 # ---------------------------------------------------------------------------
-# RaJIVE parity: identifiability filter uses original norm(score) criterion
+# Identifiability norm: default L2 vs original RaJIVE L1 parity
 # ---------------------------------------------------------------------------
 
-test_that("identifiability filter uses original RaJIVE norm(score) criterion", {
+make_identifiability_norm_fixture <- function() {
   q <- rep(0.5, 4)  # unit vector
   X <- q %*% t(rep(0.09, 4))
-
-  block_svd <- list(
-    list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1)),
-    list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1))
+  list(
+    blocks = list(X, X),
+    block_svd = list(
+      list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1)),
+      list(u = matrix(q, ncol = 1), d = 1, v = matrix(1, ncol = 1))
+    )
   )
+}
+
+test_that("identifiability filter defaults to L2 and drops borderline components", {
+  fx <- make_identifiability_norm_fixture()
 
   out <- rajiveplus:::get_joint_scores_robustH(
-    blocks = list(X, X),
-    block_svd = block_svd,
+    blocks = fx$blocks,
+    block_svd = fx$block_svd,
     initial_signal_ranks = c(1L, 1L),
     sv_thresholds = c(0.25, 0.25),
     n_wedin_samples = NA,
@@ -144,6 +150,109 @@ test_that("identifiability filter uses original RaJIVE norm(score) criterion", {
     num_cores = 1L
   )
 
+  expect_equal(ncol(out$joint_scores), 0L)
+  expect_identical(out$rank_sel_results$identif_dropped, 1L)
+  expect_equal(out$rank_sel_results$identifiability_norm, "l2")
+})
+
+test_that("joint_score extraction handles joint_rank = 0 without selecting column 1", {
+  fx <- make_identifiability_norm_fixture()
+
+  out <- rajiveplus:::get_joint_scores_robustH(
+    blocks = fx$blocks,
+    block_svd = fx$block_svd,
+    initial_signal_ranks = c(1L, 1L),
+    sv_thresholds = c(0.25, 0.25),
+    n_wedin_samples = NA,
+    n_rand_dir_samples = NA,
+    n_perm_samples = NA,
+    joint_rank = 0L,
+    num_cores = 1L
+  )
+
+  expect_equal(ncol(out$joint_scores), 0L)
+  expect_identical(out$rank_sel_results$identif_dropped, integer(0L))
+})
+
+test_that("identifiability_norm = 'l1' keeps original RaJIVE norm(score) parity", {
+  fx <- make_identifiability_norm_fixture()
+
+  out <- rajiveplus:::get_joint_scores_robustH(
+    blocks = fx$blocks,
+    block_svd = fx$block_svd,
+    initial_signal_ranks = c(1L, 1L),
+    sv_thresholds = c(0.25, 0.25),
+    n_wedin_samples = NA,
+    n_rand_dir_samples = NA,
+    n_perm_samples = NA,
+    joint_rank = 1L,
+    num_cores = 1L,
+    identifiability_norm = "l1"
+  )
+
   expect_equal(ncol(out$joint_scores), 1L)
   expect_identical(out$rank_sel_results$identif_dropped, integer(0L))
+  expect_equal(out$rank_sel_results$identifiability_norm, "l1")
+})
+
+test_that("Rajive validates identifiability_norm", {
+  set.seed(1)
+  Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(1, 1),
+                      n = 12, pks = c(8, 6), dist.type = 1)
+
+  expect_error(
+    Rajive(Y$sim_data, c(2L, 2L),
+           joint_rank = 1L,
+           n_wedin_samples = NA,
+           n_rand_dir_samples = NA,
+           identifiability_norm = "linf"),
+    regexp = "identifiability_norm"
+  )
+})
+
+test_that("Rajive reports the default L2 identifiability norm once", {
+  withr::local_options(list(rajiveplus.identifiability_norm.default_informed = FALSE))
+  set.seed(2)
+  Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(1, 1),
+                      n = 12, pks = c(8, 6), dist.type = 1)
+
+  expect_message(
+    Rajive(Y$sim_data, c(2L, 2L),
+           joint_rank = 1L,
+           n_wedin_samples = NA,
+           n_rand_dir_samples = NA,
+           num_cores = 1L),
+    regexp = 'identifiability_norm = "l2"'
+  )
+  expect_no_message(
+    Rajive(Y$sim_data, c(2L, 2L),
+           joint_rank = 1L,
+           n_wedin_samples = NA,
+           n_rand_dir_samples = NA,
+           num_cores = 1L)
+  )
+})
+
+test_that("explicit identifiability_norm choices do not emit default message", {
+  withr::local_options(list(rajiveplus.identifiability_norm.default_informed = FALSE))
+  set.seed(3)
+  Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(1, 1),
+                      n = 12, pks = c(8, 6), dist.type = 1)
+
+  expect_no_message(
+    Rajive(Y$sim_data, c(2L, 2L),
+           joint_rank = 1L,
+           n_wedin_samples = NA,
+           n_rand_dir_samples = NA,
+           num_cores = 1L,
+           identifiability_norm = "l2")
+  )
+  expect_no_message(
+    Rajive(Y$sim_data, c(2L, 2L),
+           joint_rank = 1L,
+           n_wedin_samples = NA,
+           n_rand_dir_samples = NA,
+           num_cores = 1L,
+           identifiability_norm = "l1")
+  )
 })

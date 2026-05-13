@@ -15,30 +15,34 @@ static double leading_singular_value(const arma::mat& x) {
 // [[Rcpp::export]]
 arma::vec wedin_bound_resampling_cpp_draws(
     const arma::mat& X,
-    const arma::mat& perp_basis,
+    const arma::mat& signal_basis,
     bool right_vectors,
     const arma::cube& draws
 ) {
     const arma::uword n_samples = draws.n_slices;
     arma::vec out(n_samples, arma::fill::zeros);
 
-    if (perp_basis.n_cols == 0 || n_samples == 0) {
+    if (signal_basis.n_cols == 0 || n_samples == 0) {
         return out;
     }
-    if (draws.n_rows != perp_basis.n_cols) {
-        Rcpp::stop("`draws` first dimension must equal ncol(perp_basis).");
+    if (draws.n_rows != signal_basis.n_rows) {
+        Rcpp::stop("`draws` first dimension must equal nrow(signal_basis).");
+    }
+    if (draws.n_cols != signal_basis.n_cols) {
+        Rcpp::stop("`draws` second dimension must equal ncol(signal_basis).");
     }
 
     for (arma::uword s = 0; s < n_samples; ++s) {
         arma::mat q;
         arma::mat r;
-        arma::qr_econ(q, r, draws.slice(s));
-        arma::mat perp_resampled = perp_basis * q;
+        arma::mat raw = draws.slice(s);
+        arma::mat projected = raw - signal_basis * (signal_basis.t() * raw);
+        arma::qr_econ(q, r, projected);
         arma::mat projection;
         if (right_vectors) {
-            projection = X * perp_resampled;
+            projection = X * q;
         } else {
-            projection = perp_resampled.t() * X;
+            projection = q.t() * X;
         }
         out(s) = leading_singular_value(projection);
     }

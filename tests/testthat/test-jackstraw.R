@@ -267,7 +267,7 @@ test_that("variable names are attached to results when colnames are present", {
   set.seed(10)
   n    <- 60
   # Use data with a true joint signal so joint_rank > 0 after the
-  # original RaJIVE norm(score) identifiability filter.
+  # post-selection identifiability filter.
   Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(2, 2), n = n,
                       pks = c(10, 8), dist.type = 1)
   blocks <- Y$sim_data

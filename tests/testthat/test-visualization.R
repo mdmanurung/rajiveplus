@@ -32,7 +32,7 @@ test_that("A1: extract_components returns rajive_diagnostics list (wide, both bo
                        "overall_sv_sq_threshold", "wedin_samples",
                        "rand_dir_samples", "wedin_cutoff", "rand_cutoff",
                        "wedin_percentile", "rand_percentile",
-                       "identif_dropped", "cutoff_rule",
+                       "identif_dropped", "identifiability_norm", "cutoff_rule",
                        "has_wedin", "has_random")
   expect_true(all(expected_fields %in% names(diag)))
 

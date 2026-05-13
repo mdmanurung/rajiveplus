@@ -13,7 +13,8 @@ Rajive(
   joint_rank = NA,
   n_perm_samples = NA,
   num_cores = 1L,
-  seed = NA_integer_
+  seed = NA_integer_,
+  identifiability_norm = c("l2", "l1")
 )
 }
 \arguments{
@@ -61,6 +62,14 @@ sampling (with a one-time warning); set
 
 \item{seed}{Integer or \code{NA}. Optional seed passed to \code{set.seed()}
 before fitting. Default \code{NA} leaves the caller's RNG state unchanged.}
+
+\item{identifiability_norm}{Character. Norm used in the post-selection
+identifiability filter for each candidate joint component. \code{"l2"}
+(default) compares \eqn{X_k^T u_j} to the singular-value threshold on
+Euclidean scale, matching the scale of AJIVE singular values. \code{"l1"}
+uses \code{sum(abs(X_k^T u_j))}, matching original RaJIVE's
+\code{norm(score)} behavior for a one-column matrix and therefore giving
+closer legacy parity.}
 }
 \value{
 An object of class \code{"rajive"}: a named list containing
@@ -78,8 +87,8 @@ An object of class \code{"rajive"}: a named list containing
     \item{\code{joint_rank_sel}}{Diagnostics from joint-rank selection:
       observed singular values, Wedin and random-direction (or
       permutation) samples, percentile cutoffs, and the indices of
-      components dropped by the original RaJIVE \code{norm(score)}
-      identifiability filter.}
+      components dropped by the selected identifiability filter. The
+      selected \code{identifiability_norm} is also stored here.}
   }
 }
 \description{

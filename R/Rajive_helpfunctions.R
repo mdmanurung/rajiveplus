@@ -86,16 +86,16 @@ get_wedin_bound_samples <- function(X, SVD, signal_rank, num_samples=1000,
                                     num_cores=2){
 
   # resample for U and V
-  U_perp <- SVD[['u']][ , -(1:signal_rank)]
+  U_signal <- SVD[['u']][ , seq_len(signal_rank), drop = FALSE]
   U_sampled_norms <- wedin_bound_resampling(X=X,
-                                            perp_basis=U_perp,
+                                            signal_basis=U_signal,
                                             right_vectors=FALSE,
                                             num_samples=num_samples,
                                             num_cores=num_cores)
 
-  V_perp <- SVD[['v']][ , -(1:signal_rank)]
+  V_signal <- SVD[['v']][ , seq_len(signal_rank), drop = FALSE]
   V_sampled_norms <- wedin_bound_resampling(X=X,
-                                            perp_basis=V_perp,
+                                            signal_basis=V_signal,
                                             right_vectors=TRUE,
                                             num_samples=num_samples,
                                             num_cores=num_cores)
@@ -126,27 +126,29 @@ get_wedin_bound_samples <- function(X, SVD, signal_rank, num_samples=1000,
 #' Resampling procedure for the wedin bound
 #'
 #' @param X Matrix. The data matrix.
-#' @param perp_basis Matrix. Either U_perp or V_perp: the remaining left/right singluar vectors of X after estimating the signal rank.
+#' @param signal_basis Matrix. Either U or V signal-space basis after
+#'   estimating the signal rank.
 #' @param right_vectors Boolean. Right multiplication or left multiplication.
 #' @param num_samples Integer. Number of vectors selected for resampling procedure.
 #' @param num_cores Integer. Number of parallel cores to use (default 2).
 #' @importFrom doRNG %dorng%
 
-wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=1000,
+wedin_bound_resampling <- function(X, signal_basis, right_vectors, num_samples=1000,
                                    num_cores=2){
 
-  rank <- dim(perp_basis)[2]
+  signal_basis <- qr.Q(qr(signal_basis))
+  rank <- ncol(signal_basis)
   if (rank == 0L) {
     return(rep(0, num_samples))
   }
   numCores <- max(1L, as.integer(num_cores))
-  draw_dim <- c(ncol(perp_basis), rank)
+  draw_dim <- c(nrow(signal_basis), rank)
   if (numCores == 1L) {
     draws <- array(stats::rnorm(prod(draw_dim) * num_samples),
                    dim = c(draw_dim, num_samples))
     return(as.numeric(wedin_bound_resampling_cpp_draws(
       X = X,
-      perp_basis = perp_basis,
+      signal_basis = signal_basis,
       right_vectors = right_vectors,
       draws = draws
     )))
@@ -165,7 +167,7 @@ wedin_bound_resampling <- function(X, perp_basis, right_vectors, num_samples=100
                    dim = c(draw_dim, length(chunk)))
     wedin_bound_resampling_cpp_draws(
       X = X,
-      perp_basis = perp_basis,
+      signal_basis = signal_basis,
       right_vectors = right_vectors,
       draws = draws
     )

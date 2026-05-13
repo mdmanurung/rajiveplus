@@ -12,16 +12,16 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // wedin_bound_resampling_cpp_draws
-arma::vec wedin_bound_resampling_cpp_draws(const arma::mat& X, const arma::mat& perp_basis, bool right_vectors, const arma::cube& draws);
-RcppExport SEXP _rajiveplus_wedin_bound_resampling_cpp_draws(SEXP XSEXP, SEXP perp_basisSEXP, SEXP right_vectorsSEXP, SEXP drawsSEXP) {
+arma::vec wedin_bound_resampling_cpp_draws(const arma::mat& X, const arma::mat& signal_basis, bool right_vectors, const arma::cube& draws);
+RcppExport SEXP _rajiveplus_wedin_bound_resampling_cpp_draws(SEXP XSEXP, SEXP signal_basisSEXP, SEXP right_vectorsSEXP, SEXP drawsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type perp_basis(perp_basisSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type signal_basis(signal_basisSEXP);
     Rcpp::traits::input_parameter< bool >::type right_vectors(right_vectorsSEXP);
     Rcpp::traits::input_parameter< const arma::cube& >::type draws(drawsSEXP);
-    rcpp_result_gen = Rcpp::wrap(wedin_bound_resampling_cpp_draws(X, perp_basis, right_vectors, draws));
+    rcpp_result_gen = Rcpp::wrap(wedin_bound_resampling_cpp_draws(X, signal_basis, right_vectors, draws));
     return rcpp_result_gen;
 END_RCPP
 }

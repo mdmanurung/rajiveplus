@@ -93,6 +93,8 @@ For \code{what = "rank_diagnostics"} and \code{format = "wide"}: a
       (95) or \code{NA_real_}.}
     \item{\code{identif_dropped}}{Integer vector of component indices
       dropped by the identifiability check (length 0 when none dropped).}
+    \item{\code{identifiability_norm}}{Norm used by the identifiability
+      filter, or \code{NA_character_} for legacy objects without the field.}
     \item{\code{cutoff_rule}}{One of \code{"max(wedin, random)"},
       \code{"max(wedin, perm)"}, \code{"wedin_only"},
       \code{"random_only"}, \code{"perm_only"}, or

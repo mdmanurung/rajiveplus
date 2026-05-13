@@ -193,6 +193,9 @@ test_that("bootstrap refits use num_cores for outer replicates and serial inner 
     seen_single <<- c(seen_single, as.integer(num_cores))
     structure(list(joint_rank = 1L), class = "rajive_rank_only")
   }
+  fake_parallel <- function(X, FUN, num_cores = 1L, ...) {
+    lapply(X, FUN, ...)
+  }
 
   set.seed(7)
   testthat::with_mocked_bindings(
@@ -204,6 +207,7 @@ test_that("bootstrap refits use num_cores for outer replicates and serial inner 
       keep = "joint_rank",
       num_cores = 5L
     ),
+    .rajive_parallel_lapply = fake_parallel,
     .Rajive_rank_only = fake_rank
   )
   expect_equal(seen_single, c(1L, 1L))
@@ -233,6 +237,7 @@ test_that("bootstrap refits use num_cores for outer replicates and serial inner 
       B = 2L,
       num_cores = 6L
     ),
+    .rajive_parallel_lapply = fake_parallel,
     Rajive = fake_scores
   )
   expect_equal(seen_multi, c(1L, 1L))
@@ -273,6 +278,128 @@ test_that("bootstrap refits are parallelized at replicate level when num_cores >
 
   expect_true(seen_parallel)
   expect_equal(seen_inner_cores, rep(1L, 3L))
+})
+
+test_that("bootstrap refits inherit fitted identifiability_norm", {
+  n <- 8L
+  blocks <- list(
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L)),
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L))
+  )
+  ref_scores <- matrix(seq_len(n), ncol = 1L)
+  ajive_output <- structure(
+    list(
+      joint_scores = ref_scores,
+      joint_rank_sel = list(identifiability_norm = "l1")
+    ),
+    class = "rajive"
+  )
+
+  seen <- character()
+  fake_full <- function(b_list, initial_signal_ranks,
+                        identifiability_norm = NULL, ...) {
+    seen <<- c(seen, identifiability_norm)
+    list(joint_scores = matrix(b_list[[1L]][, 1L], ncol = 1L), joint_rank = 1L)
+  }
+
+  set.seed(72)
+  testthat::with_mocked_bindings(
+    rajiveplus:::.rajive_bootstrap(
+      ajive_output = ajive_output,
+      blocks = blocks,
+      initial_signal_ranks = c(1L, 1L),
+      B = 2L,
+      keep = "scores"
+    ),
+    Rajive = fake_full
+  )
+  expect_equal(seen, c("l1", "l1"))
+
+  seen <- character()
+  set.seed(73)
+  testthat::with_mocked_bindings(
+    rajiveplus:::.rajive_bootstrap(
+      ajive_output = ajive_output,
+      blocks = blocks,
+      initial_signal_ranks = c(1L, 1L),
+      B = 2L,
+      keep = "scores",
+      identifiability_norm = "l2"
+    ),
+    Rajive = fake_full
+  )
+  expect_equal(seen, c("l2", "l2"))
+})
+
+test_that("rank-only bootstrap refits default identifiability_norm to L2 quietly", {
+  n <- 8L
+  blocks <- list(
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L)),
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L))
+  )
+
+  seen <- character()
+  fake_rank_only <- function(b_list, initial_signal_ranks,
+                             identifiability_norm = NULL, ...) {
+    seen <<- c(seen, identifiability_norm)
+    structure(list(joint_rank = 1L), class = "rajive_rank_only")
+  }
+
+  set.seed(74)
+  expect_no_message(
+    testthat::with_mocked_bindings(
+      rajiveplus:::.rajive_bootstrap(
+        ajive_output = NULL,
+        blocks = blocks,
+        initial_signal_ranks = c(1L, 1L),
+        B = 2L,
+        keep = "joint_rank"
+      ),
+      .Rajive_rank_only = fake_rank_only
+    )
+  )
+  expect_equal(seen, c("l2", "l2"))
+})
+
+test_that("multi-score bootstrap refits inherit fitted identifiability_norm", {
+  n <- 8L
+  blocks <- list(
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L)),
+    cbind(seq_len(n), matrix(rnorm(n * 2L), n, 2L))
+  )
+  ajive_output <- structure(
+    list(
+      joint_scores = matrix(seq_len(n), ncol = 1L),
+      joint_rank_sel = list(identifiability_norm = "l1")
+    ),
+    class = "rajive"
+  )
+  targets <- data.frame(
+    source = "joint",
+    block = NA_integer_,
+    key = "joint",
+    stringsAsFactors = FALSE
+  )
+
+  seen <- character()
+  fake_full <- function(b_list, initial_signal_ranks,
+                        identifiability_norm = NULL, ...) {
+    seen <<- c(seen, identifiability_norm)
+    list(joint_scores = matrix(b_list[[1L]][, 1L], ncol = 1L), joint_rank = 1L)
+  }
+
+  set.seed(75)
+  testthat::with_mocked_bindings(
+    rajiveplus:::.rajive_bootstrap_scores_multi(
+      ajive_output = ajive_output,
+      blocks = blocks,
+      initial_signal_ranks = c(1L, 1L),
+      targets = targets,
+      B = 2L
+    ),
+    Rajive = fake_full
+  )
+  expect_equal(seen, c("l1", "l1"))
 })
 
 test_that(".rajive_bootstrap uses rank-only refits only for rank-only payloads", {

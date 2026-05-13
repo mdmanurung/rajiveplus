@@ -87,7 +87,7 @@
   idx_list <- .jackknife_indices(n_ref, cluster)
   K <- length(blocks)
   n_comp <- ncol(ajive_output$joint_scores)
-  dots <- list(...)
+  dots <- .refit_dots_with_identifiability_norm(list(...), ajive_output)
 
   if (target == "joint_rank") {
     out <- rep(NA_real_, length(idx_list))

@@ -29,6 +29,37 @@
   parallel::parLapply(cl, X, FUN, ...)
 }
 
+.inform_identifiability_norm_default <- function() {
+  opt <- "rajiveplus.identifiability_norm.default_informed"
+  if (!isTRUE(getOption(opt, FALSE))) {
+    cli::cli_inform(
+      'Rajive() uses identifiability_norm = "l2" by default; use "l1" for closer original RaJIVE parity.'
+    )
+    options(rajiveplus.identifiability_norm.default_informed = TRUE)
+  }
+  invisible(NULL)
+}
+
+.identifiability_projection_norm <- function(score, identifiability_norm) {
+  if (identifiability_norm == "l2") {
+    sqrt(sum(score^2))
+  } else {
+    sum(abs(score))
+  }
+}
+
+.match_identifiability_norm <- function(identifiability_norm) {
+  tryCatch(
+    match.arg(identifiability_norm, c("l2", "l1")),
+    error = function(e) {
+      cli::cli_abort(
+        '`identifiability_norm` must be one of "l2" or "l1".',
+        class = "rajiveplus_invalid_input"
+      )
+    }
+  )
+}
+
 
 #' Robust Angle-based Joint and Individual Variation Explained (RaJIVE)
 #'
@@ -80,6 +111,13 @@
 #'   \code{RNGkind("L'Ecuyer-CMRG")} explicitly to silence it.
 #' @param seed Integer or \code{NA}. Optional seed passed to \code{set.seed()}
 #'   before fitting. Default \code{NA} leaves the caller's RNG state unchanged.
+#' @param identifiability_norm Character. Norm used in the post-selection
+#'   identifiability filter for each candidate joint component. \code{"l2"}
+#'   (default) compares \eqn{X_k^T u_j} to the singular-value threshold on
+#'   Euclidean scale, matching the scale of AJIVE singular values. \code{"l1"}
+#'   uses \code{sum(abs(X_k^T u_j))}, matching original RaJIVE's
+#'   \code{norm(score)} behavior for a one-column matrix and therefore giving
+#'   closer legacy parity.
 #'
 #' @return An object of class \code{"rajive"}: a named list containing
 #'   \describe{
@@ -96,8 +134,8 @@
 #'     \item{\code{joint_rank_sel}}{Diagnostics from joint-rank selection:
 #'       observed singular values, Wedin and random-direction (or
 #'       permutation) samples, percentile cutoffs, and the indices of
-#'       components dropped by the original RaJIVE \code{norm(score)}
-#'       identifiability filter.}
+#'       components dropped by the selected identifiability filter. The
+#'       selected \code{identifiability_norm} is also stored here.}
 #'   }
 #'
 #' @section Robustness and Huber tuning:
@@ -170,8 +208,15 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                            joint_rank=NA,
                            n_perm_samples=NA,
                            num_cores=1L,
-                           seed=NA_integer_)
+                           seed=NA_integer_,
+                           identifiability_norm=c("l2", "l1"))
 {
+  identifiability_norm_defaulted <- missing(identifiability_norm)
+  identifiability_norm <- .match_identifiability_norm(identifiability_norm)
+  if (identifiability_norm_defaulted) {
+    .inform_identifiability_norm_default()
+  }
+
   .Rajive_core(
     blocks = blocks,
     initial_signal_ranks = initial_signal_ranks,
@@ -182,6 +227,7 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
     n_perm_samples = n_perm_samples,
     num_cores = num_cores,
     seed = seed,
+    identifiability_norm = identifiability_norm,
     rank_only = FALSE
   )
 }
@@ -191,7 +237,9 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                               joint_rank=NA,
                               n_perm_samples=NA,
                               num_cores=1L,
-                              seed=NA_integer_) {
+                              seed=NA_integer_,
+                              identifiability_norm=c("l2", "l1")) {
+  identifiability_norm <- .match_identifiability_norm(identifiability_norm)
   .Rajive_core(
     blocks = blocks,
     initial_signal_ranks = initial_signal_ranks,
@@ -202,6 +250,7 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
     n_perm_samples = n_perm_samples,
     num_cores = num_cores,
     seed = seed,
+    identifiability_norm = identifiability_norm,
     rank_only = TRUE
   )
 }
@@ -212,8 +261,10 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                          n_perm_samples=NA,
                          num_cores=1L,
                          seed=NA_integer_,
+                         identifiability_norm=c("l2", "l1"),
                          rank_only=FALSE) {
 
+  identifiability_norm <- .match_identifiability_norm(identifiability_norm)
   num_cores <- max(1L, as.integer(num_cores))
   if (!is.na(seed)) set.seed(as.integer(seed))
 
@@ -322,7 +373,8 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                                   n_rand_dir_samples=n_rand_dir_samples,
                                   joint_rank=joint_rank,
                                   n_perm_samples=n_perm_samples,
-                                  num_cores=num_cores)
+                                  num_cores=num_cores,
+                                  identifiability_norm=identifiability_norm)
   joint_rank_sel_results <- out$rank_sel_results
   joint_scores <- out$joint_scores
 
@@ -340,9 +392,13 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
 
   # step 3: final decomposition -----------------------------------------------------
 
-  block_decomps <- mapply(function(l,m)
-    get_final_decomposition_robustH(l, joint_scores = joint_scores, m), blocks,
-    sv_thresholds )
+  block_decomps <- mapply(function(l, m)
+    get_final_decomposition_robustH(
+      l,
+      joint_scores = joint_scores,
+      sv_threshold = m,
+      full = full
+    ), blocks, sv_thresholds)
 
 
 
@@ -400,6 +456,9 @@ get_sv_threshold <- function(singular_values, rank){
 #' @param n_perm_samples Integer or NA. Number of permutation samples for the permutation-based
 #'   joint rank threshold. See \code{\link{Rajive}} for full description.
 #' @param num_cores Integer. Number of cores for parallel resampling.
+#' @param identifiability_norm Character. \code{"l2"} uses Euclidean norm for
+#'   the post-selection identifiability filter; \code{"l1"} matches original
+#'   RaJIVE's one-column \code{norm(score)} behavior.
 #' @importFrom stats quantile
 #'
 #'
@@ -409,8 +468,10 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
                                      n_wedin_samples=1000, n_rand_dir_samples=1000,
                                      joint_rank=NA,
                                      n_perm_samples=NA,
-                                     num_cores=2){
+                                     num_cores=2,
+                                     identifiability_norm=c("l2", "l1")){
 
+  identifiability_norm <- .match_identifiability_norm(identifiability_norm)
 
   if(is.na(n_wedin_samples) & is.na(n_rand_dir_samples) & is.na(n_perm_samples) & is.na(joint_rank)){
     stop('at least one of n_wedin_samples, n_rand_dir_samples, n_perm_samples, or joint_rank must not be NA',
@@ -434,6 +495,7 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
 
   rank_sel_results  <- list()
   rank_sel_results[['obs_svals']] <- M_svd[['d']]
+  rank_sel_results[['identifiability_norm']] <- identifiability_norm
 
   if(is.na(joint_rank)){
 
@@ -508,20 +570,18 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
   # estimate joint score space ------------------------------------
 
 
-  joint_scores <- M_svd[['u']][ , 1:joint_rank_estimate, drop=FALSE]
+  joint_scores <- M_svd[['u']][ , seq_len(joint_rank_estimate), drop=FALSE]
 
   # reconsider joint score space ------------------------------------
   # remove columns of joint_scores that have a
   # trivial projection from one of the data matrices
 
   to_remove <- c()
-  for(k in 1:K){
-    for(j in 1:joint_rank_estimate){
+  for(k in seq_len(K)){
+    for(j in seq_len(joint_rank_estimate)){
 
       score <- t(blocks[[k]]) %*% joint_scores[ , j]
-      # Match original RaJIVE's identifiability check.  For this one-column
-      # matrix, base::norm() uses type = "O", equivalent to sum(abs(score)).
-      sv <- norm(score)
+      sv <- .identifiability_projection_norm(score, identifiability_norm)
 
       if(sv < sv_thresholds[[k]]){
         message('removing column ', j)
@@ -531,7 +591,7 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
     }
 
   }
-  to_keep <- setdiff(1:joint_rank_estimate, to_remove)
+  to_keep <- setdiff(seq_len(joint_rank_estimate), to_remove)
   joint_rank <- length(to_keep)
   joint_scores <- joint_scores[ , to_keep, drop=FALSE]
 

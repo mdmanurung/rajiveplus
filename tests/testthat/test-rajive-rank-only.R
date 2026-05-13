@@ -19,6 +19,10 @@ expect_rank_only_equivalent <- function(full, rank_only, tol = 1e-10) {
     rank_only$joint_rank_sel$identif_dropped,
     full$joint_rank_sel$identif_dropped
   )
+  expect_equal(
+    rank_only$joint_rank_sel$identifiability_norm,
+    full$joint_rank_sel$identifiability_norm
+  )
 
   if (!is.na(full$joint_rank) && full$joint_rank > 0L) {
     expect_equal(rank_only$joint_scores, full$joint_scores, tolerance = tol)

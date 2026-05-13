@@ -6,7 +6,7 @@
 \usage{
 wedin_bound_resampling(
   X,
-  perp_basis,
+  signal_basis,
   right_vectors,
   num_samples = 1000,
   num_cores = 2
@@ -15,7 +15,8 @@ wedin_bound_resampling(
 \arguments{
 \item{X}{Matrix. The data matrix.}
 
-\item{perp_basis}{Matrix. Either U_perp or V_perp: the remaining left/right singluar vectors of X after estimating the signal rank.}
+\item{signal_basis}{Matrix. Either U or V signal-space basis after
+estimating the signal rank.}
 
 \item{right_vectors}{Boolean. Right multiplication or left multiplication.}
 

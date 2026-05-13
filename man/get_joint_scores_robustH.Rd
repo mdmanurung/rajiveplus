@@ -13,7 +13,8 @@ get_joint_scores_robustH(
   n_rand_dir_samples = 1000,
   joint_rank = NA,
   n_perm_samples = NA,
-  num_cores = 2
+  num_cores = 2,
+  identifiability_norm = c("l2", "l1")
 )
 }
 \arguments{
@@ -35,6 +36,10 @@ get_joint_scores_robustH(
 joint rank threshold. See \code{\link{Rajive}} for full description.}
 
 \item{num_cores}{Integer. Number of cores for parallel resampling.}
+
+\item{identifiability_norm}{Character. \code{"l2"} uses Euclidean norm for
+the post-selection identifiability filter; \code{"l1"} matches original
+RaJIVE's one-column \code{norm(score)} behavior.}
 }
 \description{
 Estimate the joint rank with the wedin bound, compute the signal scores SVD, double check each joint component.

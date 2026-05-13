@@ -31,12 +31,12 @@ test_that("wedin_bound_resampling is reproducible under L'Ecuyer", {
 
   set.seed(2027)
   X <- matrix(rnorm(30 * 12), 30, 12)
-  perp_basis <- qr.Q(qr(matrix(rnorm(30 * 4), 30, 4)))
+  signal_basis <- qr.Q(qr(matrix(rnorm(30 * 4), 30, 4)))
 
   a <- with_lecuyer_seed(2027, {
     rajiveplus:::wedin_bound_resampling(
       X = X,
-      perp_basis = perp_basis,
+      signal_basis = signal_basis,
       right_vectors = FALSE,
       num_samples = 30,
       num_cores = 2
@@ -45,7 +45,7 @@ test_that("wedin_bound_resampling is reproducible under L'Ecuyer", {
   b <- with_lecuyer_seed(2027, {
     rajiveplus:::wedin_bound_resampling(
       X = X,
-      perp_basis = perp_basis,
+      signal_basis = signal_basis,
       right_vectors = FALSE,
       num_samples = 30,
       num_cores = 2
