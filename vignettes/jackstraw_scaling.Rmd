@@ -61,7 +61,7 @@ library(ggplot2)
 
 ## Time vs Sample Size (n)
 
-```{r}
+```{r, eval=run_heavy}
 ns <- c(50L, 100L, 200L)
 
 time_n_rows <- lapply(ns, function(n_i) {
@@ -103,7 +103,7 @@ ggplot(time_n_df, aes(x = n, y = elapsed)) +
 
 ## Time vs Feature Count (p)
 
-```{r}
+```{r, eval=run_heavy}
 ps <- c(100L, 500L, 1000L, 2000L)
 
 time_p_rows <- lapply(ps, function(p_i) {
@@ -149,7 +149,7 @@ ggplot(time_p_df, aes(x = p, y = elapsed)) +
 `n_null` is the knob analysts actually turn. Because the permutation loop runs
 once per null replicate, the elapsed time should rise almost linearly.
 
-```{r}
+```{r, eval=run_heavy}
 nnulls <- c(5L, 10L, 25L, 50L)
 
 set.seed(42)
@@ -192,7 +192,7 @@ ggplot(time_nnull_df, aes(x = n_null, y = elapsed)) +
 
 ## Memory (peakRAM)
 
-```{r}
+```{r, eval=run_heavy}
 ram_n_rows <- lapply(c(50L, 100L, 200L), function(n_i) {
   set.seed(42)
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
@@ -206,7 +206,7 @@ ram_n_df <- do.call(rbind, ram_n_rows)
 saveRDS(ram_n_df, file.path(data_dir, "jackstraw_ram_vs_n.rds"))
 ```
 
-```{r}
+```{r, eval=run_heavy}
 ram_p_rows <- lapply(c(100L, 500L, 1000L, 2000L), function(p_i) {
   set.seed(42)
   Y_i    <- ajive.data.sim(K = 2, rankJ = 2, rankA = c(5, 5),
@@ -289,7 +289,7 @@ if (requireNamespace("profmem", quietly = TRUE)) {
 `profvis` is best used at the console because it returns an HTML widget rather
 than a static plot. The code below is kept as a ready-made flame-graph recipe.
 
-```{r}
+```{r, eval=FALSE}
 # Run interactively only — not rendered in the vignette
 if (requireNamespace("profvis", quietly = TRUE)) {
   set.seed(1)
