@@ -102,17 +102,22 @@ diagnostics. Because `rank_candidates` is not set, the default candidate set is
 `0:min(initial_signal_ranks)`.
 
 ```{r fit}
+
 fit_union <- Rajive(
   blocks_union,
-  initial_signal_ranks = c(4L, 4L, 4L),
+  initial_signal_ranks = c(7L, 6L, 8L),
   missing = "native",
   mask = mask,
   joint_rank = NA,
-  full = FALSE,
+  full = TRUE,
+  n_perm_samples = 1000,
+  identifiability_norm = "l2",
+  num_cores = 10L,
   missing_control = rajive_missing_control(
     center = TRUE,
     scale = TRUE,
-    normalize = TRUE
+    normalize = TRUE,
+    n_refits = 10L
   ),
   seed = 4202
 )

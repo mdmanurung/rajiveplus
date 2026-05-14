@@ -58,6 +58,20 @@ test_that("weighted robust SVD handles fully masked rows and columns", {
   expect_equal(got$v[5, ], c(0, 0), tolerance = 1e-12)
 })
 
+test_that("weighted robust SVD can shrink singular values", {
+  set.seed(8105)
+  X <- matrix(rnorm(54), nrow = 9)
+  W <- matrix(1, nrow = nrow(X), ncol = ncol(X))
+
+  base <- rajiveplus:::RobRSVD.all(X, nrank = 2, weights = W)
+  shrunk <- rajiveplus:::RobRSVD.all(X, nrank = 2, weights = W,
+                                     shrinkage = 0.25)
+
+  expect_equal(shrunk$d, pmax(base$d - 0.25, 0), tolerance = 1e-10)
+  expect_lt(norm(rajiveplus:::svd_reconstruction(shrunk), "F"),
+            norm(rajiveplus:::svd_reconstruction(base), "F"))
+})
+
 test_that("RobRSVD.all validates weight dimensions", {
   X <- matrix(rnorm(20), nrow = 5)
   W <- matrix(1, nrow = 4, ncol = 4)

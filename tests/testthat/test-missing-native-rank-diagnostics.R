@@ -43,7 +43,8 @@ test_that("rank diagnostics report held-out prediction error on the fitted prepr
   mask$block1[c(2, 7), 3] <- FALSE
   mask$block2[4, 2] <- FALSE
   control <- rajive_missing_control(center = TRUE, scale = TRUE,
-                                    normalize = TRUE)
+                                    normalize = TRUE,
+                                    rank_repeats = 1L)
 
   fit <- Rajive(blocks, c(2L, 2L), missing = "native", mask = mask,
                 joint_rank = 1L, seed = 8703,

@@ -6,18 +6,21 @@
 #' @param rank Integer. Rank of SVD decomposition
 #' @param weights Optional observed-entry weight/mask matrix forwarded to
 #'   \code{\link{RobRSVD.all}}.
+#' @param shrinkage Non-negative singular-value shrinkage forwarded to
+#'   \code{\link{RobRSVD.all}}.
 #'
 #' @return List. The SVD of X.
 
 
 
-get_svd_robustH <- function(X, rank=NULL, weights = NULL){
+get_svd_robustH <- function(X, rank=NULL, weights = NULL, shrinkage = 0){
 
   if(is.null(rank)){
-    decomposition <- RobRSVD.all(X, weights = weights)
+    decomposition <- RobRSVD.all(X, weights = weights, shrinkage = shrinkage)
     decomposition
   } else{
-    decomposition <- RobRSVD.all(X, nrank = rank, weights = weights)
+    decomposition <- RobRSVD.all(X, nrank = rank, weights = weights,
+                                 shrinkage = shrinkage)
     decomposition
   }
 

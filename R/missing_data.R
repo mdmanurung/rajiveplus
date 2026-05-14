@@ -496,6 +496,10 @@
 #' @param rank_candidates Optional non-negative integer vector for
 #'   native candidate-rank diagnostics. When \code{NULL}, native automatic rank
 #'   selection evaluates \code{0:min(initial_signal_ranks)}.
+#' @param rank_repeats Number of repeated holdout splits to average for native
+#'   automatic rank diagnostics.
+#' @param svd_shrinkage Non-negative singular-value soft-threshold for the
+#'   weighted low-rank completion steps used by native missing-data SVDs.
 #' @param n_refits Number of aligned refits for \code{uncertainty =
 #'   "bootstrap"} or \code{"mi"}.
 #' @param censoring Optional list of censoring metadata, for example
@@ -509,15 +513,29 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                                    normalize = FALSE,
                                    min_component_support = 2L,
                                    rank_candidates = NULL,
+                                   rank_repeats = 5L,
+                                   svd_shrinkage = 0,
                                    n_refits = 5L,
                                    censoring = NULL,
                                    sensitivity = NULL) {
+  rank_repeats <- as.integer(rank_repeats)
+  if (length(rank_repeats) != 1L || is.na(rank_repeats) ||
+      rank_repeats < 1L) {
+    rank_repeats <- 1L
+  }
+  svd_shrinkage <- as.numeric(svd_shrinkage)
+  if (length(svd_shrinkage) != 1L || is.na(svd_shrinkage) ||
+      !is.finite(svd_shrinkage) || svd_shrinkage < 0) {
+    svd_shrinkage <- 0
+  }
   list(
     center = isTRUE(center),
     scale = isTRUE(scale),
     normalize = isTRUE(normalize),
     min_component_support = as.integer(min_component_support),
     rank_candidates = rank_candidates,
+    rank_repeats = rank_repeats,
+    svd_shrinkage = svd_shrinkage,
     n_refits = as.integer(n_refits),
     censoring = censoring,
     sensitivity = sensitivity
@@ -638,6 +656,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
 
 .fit_incomplete_block_decomposition <- function(x, mask, joint_scores,
                                                 initial_signal_rank,
+                                                svd_shrinkage = 0,
                                                 full = TRUE,
                                                 block_name = NULL) {
   joint_rank <- ncol(joint_scores)
@@ -652,7 +671,8 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
   residual_seed[!mask] <- NA_real_
   indiv_rank <- max(0L, as.integer(initial_signal_rank) - joint_rank)
   if (indiv_rank > 0L) {
-    indiv_svd <- RobRSVD.all(residual_seed, nrank = indiv_rank, weights = mask)
+    indiv_svd <- RobRSVD.all(residual_seed, nrank = indiv_rank, weights = mask,
+                             shrinkage = svd_shrinkage)
     individual_full <- svd_reconstruction(indiv_svd)
     individual_full[rowSums(mask) == 0L, ] <- 0
     individual_full[, colSums(mask) == 0L] <- 0
@@ -843,7 +863,8 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
   block_svd <- lapply(seq_along(preprocess$blocks), function(k) {
     get_svd_robustH(preprocess$blocks[[k]],
                     rank = min(initial_signal_ranks[[k]], min(dim(preprocess$blocks[[k]]))),
-                    weights = mask[[k]])
+                    weights = mask[[k]],
+                    shrinkage = control$svd_shrinkage)
   })
 
   signal_scores <- lapply(seq_along(block_svd), function(k) {
@@ -876,6 +897,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     decomp <- .fit_incomplete_block_decomposition(
       preprocess$blocks[[k]], mask[[k]], joint_scores,
       initial_signal_rank = initial_signal_ranks[[k]],
+      svd_shrinkage = control$svd_shrinkage,
       full = full,
       block_name = preprocess$block_names[[k]]
     )
@@ -1443,7 +1465,9 @@ summary.rajive_incomplete <- function(object, ...) {
 #'   plus a parsimony penalty of 0.001 per joint component. When possible, the
 #'   holdout units are whole observed sample rows within a block, so the
 #'   diagnostic scores how well cross-block joint structure predicts
-#'   block/sample rows that were hidden from fitting.
+#'   block/sample rows that were hidden from fitting. The held-out error is
+#'   averaged over \code{rank_repeats} splits from
+#'   \code{\link{rajive_missing_control}}.
 #'
 #' @return A data frame with columns \code{joint_rank},
 #'   \code{prediction_error}, \code{weak_support_rate},
@@ -1481,7 +1505,13 @@ diagnose_missing_ranks <- function(blocks,
   if (!is.na(seed)) set.seed(as.integer(seed))
 
   missing_fraction <- mean(!unlist(normalized$mask, use.names = FALSE))
-  folds <- .rank_holdout_folds(normalized$mask)
+  rank_repeats <- max(1L, as.integer(control$rank_repeats))
+  fold_sets <- replicate(
+    rank_repeats,
+    .rank_holdout_folds(normalized$mask),
+    simplify = FALSE
+  )
+  fold_sets <- Filter(function(x) length(x) > 0L, fold_sets)
   diagnostic_blocks <- normalized$blocks
   if (missing_fraction > 0) {
     diagnostic_blocks <- .center_scale_observed(
@@ -1510,18 +1540,21 @@ diagnose_missing_ranks <- function(blocks,
       identifiability_norm = identifiability_norm,
       .warn_signal_rank = FALSE
     )
-    if (length(folds) > 0L) {
-      pred <- .rank_holdout_prediction_error(
-        blocks = normalized$blocks,
-        mask = normalized$mask,
-        folds = folds,
-        initial_signal_ranks = initial_signal_ranks,
-        rank = rank,
-        control = control,
-        full = full,
-        num_cores = num_cores,
-        identifiability_norm = identifiability_norm
-      )
+    if (length(fold_sets) > 0L) {
+      pred_values <- vapply(fold_sets, function(folds) {
+        .rank_holdout_prediction_error(
+          blocks = normalized$blocks,
+          mask = normalized$mask,
+          folds = folds,
+          initial_signal_ranks = initial_signal_ranks,
+          rank = rank,
+          control = control,
+          full = full,
+          num_cores = num_cores,
+          identifiability_norm = identifiability_norm
+        )
+      }, numeric(1L))
+      pred <- mean(pred_values[is.finite(pred_values)])
     } else {
       pred <- NA_real_
     }

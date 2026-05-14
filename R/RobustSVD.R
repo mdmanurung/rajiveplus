@@ -12,13 +12,16 @@
 #' @param weights Optional numeric or logical matrix with the same dimensions
 #'   as \code{data}. Positive / \code{TRUE} entries are treated as observed;
 #'   zero / \code{FALSE} entries are ignored by the weighted SVD path.
+#' @param shrinkage Non-negative singular-value soft-threshold applied after
+#'   each weighted low-rank completion step. The default \code{0} preserves the
+#'   historical unregularized behaviour.
 #' @importFrom stats median
 #' @return List with entries \code{d}, \code{u}, \code{v}.  When
 #'   \code{nrank <= 0}, returns \code{numeric(0)} singular values and
 #'   zero-column \code{u}/\code{v} matrices without calling the C++ backend.
 
 RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
-                        weights = NULL)
+                        weights = NULL, shrinkage = 0)
 {
   if (!is.matrix(data)) {
     cli::cli_abort(
@@ -46,6 +49,14 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
       class = "rajiveplus_invalid_input"
     )
   }
+  shrinkage <- as.numeric(shrinkage)
+  if (length(shrinkage) != 1L || is.na(shrinkage) ||
+      !is.finite(shrinkage) || shrinkage < 0) {
+    cli::cli_abort(
+      "`shrinkage` must be a single non-negative finite number.",
+      class = "rajiveplus_invalid_input"
+    )
+  }
   if (nrank <= 0L) {
     return(list(
       d = numeric(0),
@@ -61,21 +72,30 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
           class = "rajiveplus_invalid_input"
         )
       }
+      if (shrinkage > 0) {
+        out <- RobRSVD.all(data, nrank = nrank, svdinit = svdinit,
+                           weights = NULL)
+        out$d <- pmax(out$d - shrinkage, 0)
+        return(out)
+      }
     } else {
-      return(.RobRSVD_all_weighted_R(data, weights, nrank = nrank))
+      return(.RobRSVD_all_weighted_R(data, weights, nrank = nrank,
+                                     shrinkage = shrinkage))
     }
   }
   if (is.null(svdinit)) {
     svdinit <- svd(data)
   }
 
-  RobRSVD_all_cpp(
+  out <- RobRSVD_all_cpp(
     data   = data,
     nrank  = nrank,
     sinit1 = svdinit$d[1],
     uinit1 = svdinit$u[, 1, drop = TRUE],
     vinit1 = svdinit$v[, 1, drop = TRUE]
   )
+  if (shrinkage > 0) out$d <- pmax(out$d - shrinkage, 0)
+  out
 }
 
 .normalize_robsvd_weights <- function(data, weights) {
@@ -102,7 +122,7 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
 }
 
 .RobRSVD_all_weighted_R <- function(data, weights, nrank, max_iter = 100L,
-                                    tol = 1e-7) {
+                                    tol = 1e-7, shrinkage = 0) {
   r <- min(as.integer(nrank), min(dim(data)))
   if (r <= 0L || !any(weights)) {
     return(list(
@@ -127,7 +147,7 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
   for (iter in seq_len(max_iter)) {
     sv <- svd(filled, nu = r, nv = r)
     u <- sv$u[, seq_len(r), drop = FALSE]
-    d <- sv$d[seq_len(r)]
+    d <- pmax(sv$d[seq_len(r)] - shrinkage, 0)
     v <- sv$v[, seq_len(r), drop = FALSE]
     recon <- u %*% (diag(d, nrow = r, ncol = r) %*% t(v))
     objective <- sum((data[observed] - recon[observed])^2)
@@ -142,7 +162,7 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
 
   sv <- svd(filled, nu = r, nv = r)
   u <- sv$u[, seq_len(r), drop = FALSE]
-  d <- sv$d[seq_len(r)]
+  d <- pmax(sv$d[seq_len(r)] - shrinkage, 0)
   v <- sv$v[, seq_len(r), drop = FALSE]
 
   fully_masked_rows <- rowSums(observed) == 0L
