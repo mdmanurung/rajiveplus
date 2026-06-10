@@ -36,6 +36,18 @@ unregularized behaviour.}
 
 \item{shrinkage_coeff}{Positive coefficient for \code{shrinkage =
 "missmda"}. Values above 1 shrink more strongly.}
+
+\item{max_iter}{Integer. Maximum number of weighted low-rank completion
+iterations used by the missing-data (weighted) SVD path. Defaults to
+\code{100}; non-positive or missing values fall back to the default.}
+
+\item{tol}{Numeric. Relative convergence tolerance for the weighted SVD
+path; iteration stops when the objective changes by less than this
+fraction. Defaults to \code{1e-7}.}
+
+\item{warn_nonconvergence}{Logical. If \code{TRUE}, emit a warning when the
+weighted SVD path reaches \code{max_iter} without converging. Defaults to
+\code{FALSE}.}
 }
 \value{
 List with entries \code{d}, \code{u}, \code{v}.  When
