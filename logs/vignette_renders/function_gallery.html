@@ -12,7 +12,7 @@
 
 <meta name="author" content="rajiveplus package authors" />
 
-<meta name="date" content="2026-05-14" />
+<meta name="date" content="2026-06-10" />
 
 <title>A Guided Tour of the rajiveplus API</title>
 
@@ -340,7 +340,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">A Guided Tour of the rajiveplus API</h1>
 <h4 class="author">rajiveplus package authors</h4>
-<h4 class="date">2026-05-14</h4>
+<h4 class="date">2026-06-10</h4>
 
 
 <div id="TOC">
@@ -836,8 +836,8 @@ resulting provenance labels.</p>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; [1] 80 60</span></span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="fu">get_missing_diagnostics</span>(fit_missing)<span class="sc">$</span>variance_explained</span>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;         block     Joint     Indiv     Resid observed_fraction observed_ss</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; 1        mRNA 0.1694819 0.3326692 0.4978489         0.9997917           1</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 2 Methylation 0.1538556 0.3828267 0.4633177         0.9875000           1</span></span></code></pre></div>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; 1        mRNA 0.1694572 0.3326634 0.4978794         0.9997917   0.9998051</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; 2 Methylation 0.1523714 0.3920092 0.4556194         0.9875000   0.9987629</span></span></code></pre></div>
 <p><strong>What to look for.</strong> Observed entries remain available
 as measured values when requested. Entirely missing sample-block rows
 can receive joint-only reconstructions from cross-block structure, but
@@ -2779,7 +2779,7 @@ component.</p>
 <span id="cb74-9"><a href="#cb74-9" tabindex="-1"></a>                       <span class="st">&quot;associations&quot;</span>, <span class="st">&quot;stability&quot;</span>)</span>
 <span id="cb74-10"><a href="#cb74-10" tabindex="-1"></a>)</span>
 <span id="cb74-11"><a href="#cb74-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Report written to:&quot;</span>, tmp_html, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
-<span id="cb74-12"><a href="#cb74-12" tabindex="-1"></a><span class="co">#&gt; Report written to: /tmp/Rtmp03UhQp/file1b8be246261e3d.html</span></span>
+<span id="cb74-12"><a href="#cb74-12" tabindex="-1"></a><span class="co">#&gt; Report written to: /tmp/RtmpWsXfUo/file3a8f81e1a13b9.html</span></span>
 <span id="cb74-13"><a href="#cb74-13" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;File size (bytes):&quot;</span>, <span class="fu">file.info</span>(tmp_html)<span class="sc">$</span>size, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
 <span id="cb74-14"><a href="#cb74-14" tabindex="-1"></a><span class="co">#&gt; File size (bytes): 6346</span></span></code></pre></div>
 <p><strong>What to look for.</strong> The report is a portable review
@@ -2856,36 +2856,38 @@ plots shown above.</p>
 <span id="cb75-7"><a href="#cb75-7" tabindex="-1"></a><span class="co">#&gt; BLAS/LAPACK: /exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/lib/libopenblasp-r0.3.29.so;  LAPACK version 3.12.0</span></span>
 <span id="cb75-8"><a href="#cb75-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb75-9"><a href="#cb75-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
-<span id="cb75-10"><a href="#cb75-10" tabindex="-1"></a><span class="co">#&gt;  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       </span></span>
-<span id="cb75-11"><a href="#cb75-11" tabindex="-1"></a><span class="co">#&gt;  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   </span></span>
-<span id="cb75-12"><a href="#cb75-12" tabindex="-1"></a><span class="co">#&gt;  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          </span></span>
-<span id="cb75-13"><a href="#cb75-13" tabindex="-1"></a><span class="co">#&gt; [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   </span></span>
-<span id="cb75-14"><a href="#cb75-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb75-15"><a href="#cb75-15" tabindex="-1"></a><span class="co">#&gt; time zone: Europe/Amsterdam</span></span>
-<span id="cb75-16"><a href="#cb75-16" tabindex="-1"></a><span class="co">#&gt; tzcode source: system (glibc)</span></span>
-<span id="cb75-17"><a href="#cb75-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb75-18"><a href="#cb75-18" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
-<span id="cb75-19"><a href="#cb75-19" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
-<span id="cb75-20"><a href="#cb75-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb75-21"><a href="#cb75-21" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb75-22"><a href="#cb75-22" tabindex="-1"></a><span class="co">#&gt; [1] doRNG_1.8.6.3    rngtools_1.5.2   foreach_1.5.2    ggplot2_4.0.3   </span></span>
-<span id="cb75-23"><a href="#cb75-23" tabindex="-1"></a><span class="co">#&gt; [5] rajiveplus_0.1.0</span></span>
-<span id="cb75-24"><a href="#cb75-24" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb75-25"><a href="#cb75-25" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span id="cb75-26"><a href="#cb75-26" tabindex="-1"></a><span class="co">#&gt;  [1] sass_0.4.10        generics_0.1.4     lattice_0.22-9     stringi_1.8.7     </span></span>
-<span id="cb75-27"><a href="#cb75-27" tabindex="-1"></a><span class="co">#&gt;  [5] digest_0.6.39      magrittr_2.0.4     evaluate_1.0.5     grid_4.5.1        </span></span>
-<span id="cb75-28"><a href="#cb75-28" tabindex="-1"></a><span class="co">#&gt;  [9] RColorBrewer_1.1-3 iterators_1.0.14   fastmap_1.2.0      doParallel_1.0.17 </span></span>
-<span id="cb75-29"><a href="#cb75-29" tabindex="-1"></a><span class="co">#&gt; [13] plyr_1.8.9         jsonlite_2.0.0     Matrix_1.7-5       survival_3.8-6    </span></span>
-<span id="cb75-30"><a href="#cb75-30" tabindex="-1"></a><span class="co">#&gt; [17] scales_1.4.0       codetools_0.2-20   jquerylib_0.1.4    cli_3.6.6         </span></span>
-<span id="cb75-31"><a href="#cb75-31" tabindex="-1"></a><span class="co">#&gt; [21] rlang_1.2.0        cowplot_1.2.0      splines_4.5.1      withr_3.0.2       </span></span>
-<span id="cb75-32"><a href="#cb75-32" tabindex="-1"></a><span class="co">#&gt; [25] cachem_1.1.0       yaml_2.3.11        otel_0.2.0         tools_4.5.1       </span></span>
-<span id="cb75-33"><a href="#cb75-33" tabindex="-1"></a><span class="co">#&gt; [29] parallel_4.5.1     reshape2_1.4.5     dplyr_1.1.4        vctrs_0.7.3       </span></span>
-<span id="cb75-34"><a href="#cb75-34" tabindex="-1"></a><span class="co">#&gt; [33] R6_2.6.1           lifecycle_1.0.5    stringr_1.6.0      pkgconfig_2.0.3   </span></span>
-<span id="cb75-35"><a href="#cb75-35" tabindex="-1"></a><span class="co">#&gt; [37] pillar_1.11.1      bslib_0.10.0       gtable_0.3.6       glue_1.8.1        </span></span>
-<span id="cb75-36"><a href="#cb75-36" tabindex="-1"></a><span class="co">#&gt; [41] Rcpp_1.1.1-1.1     xfun_0.54          tibble_3.3.0       tidyselect_1.2.1  </span></span>
-<span id="cb75-37"><a href="#cb75-37" tabindex="-1"></a><span class="co">#&gt; [45] knitr_1.51         dichromat_2.0-0.1  farver_2.1.2       htmltools_0.5.9   </span></span>
-<span id="cb75-38"><a href="#cb75-38" tabindex="-1"></a><span class="co">#&gt; [49] patchwork_1.3.2    rmarkdown_2.31     labeling_0.4.3     compiler_4.5.1    </span></span>
-<span id="cb75-39"><a href="#cb75-39" tabindex="-1"></a><span class="co">#&gt; [53] S7_0.2.2</span></span></code></pre></div>
+<span id="cb75-10"><a href="#cb75-10" tabindex="-1"></a><span class="co">#&gt;  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              </span></span>
+<span id="cb75-11"><a href="#cb75-11" tabindex="-1"></a><span class="co">#&gt;  [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    </span></span>
+<span id="cb75-12"><a href="#cb75-12" tabindex="-1"></a><span class="co">#&gt;  [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   </span></span>
+<span id="cb75-13"><a href="#cb75-13" tabindex="-1"></a><span class="co">#&gt;  [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 </span></span>
+<span id="cb75-14"><a href="#cb75-14" tabindex="-1"></a><span class="co">#&gt;  [9] LC_ADDRESS=C               LC_TELEPHONE=C            </span></span>
+<span id="cb75-15"><a href="#cb75-15" tabindex="-1"></a><span class="co">#&gt; [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       </span></span>
+<span id="cb75-16"><a href="#cb75-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb75-17"><a href="#cb75-17" tabindex="-1"></a><span class="co">#&gt; time zone: Europe/Amsterdam</span></span>
+<span id="cb75-18"><a href="#cb75-18" tabindex="-1"></a><span class="co">#&gt; tzcode source: system (glibc)</span></span>
+<span id="cb75-19"><a href="#cb75-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb75-20"><a href="#cb75-20" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb75-21"><a href="#cb75-21" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb75-22"><a href="#cb75-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb75-23"><a href="#cb75-23" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb75-24"><a href="#cb75-24" tabindex="-1"></a><span class="co">#&gt; [1] doRNG_1.8.6.3    rngtools_1.5.2   foreach_1.5.2    ggplot2_4.0.3   </span></span>
+<span id="cb75-25"><a href="#cb75-25" tabindex="-1"></a><span class="co">#&gt; [5] rajiveplus_0.1.0</span></span>
+<span id="cb75-26"><a href="#cb75-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb75-27"><a href="#cb75-27" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb75-28"><a href="#cb75-28" tabindex="-1"></a><span class="co">#&gt;  [1] sass_0.4.10        generics_0.1.4     lattice_0.22-9     stringi_1.8.7     </span></span>
+<span id="cb75-29"><a href="#cb75-29" tabindex="-1"></a><span class="co">#&gt;  [5] digest_0.6.39      magrittr_2.0.5     evaluate_1.0.5     grid_4.5.1        </span></span>
+<span id="cb75-30"><a href="#cb75-30" tabindex="-1"></a><span class="co">#&gt;  [9] RColorBrewer_1.1-3 iterators_1.0.14   fastmap_1.2.0      doParallel_1.0.17 </span></span>
+<span id="cb75-31"><a href="#cb75-31" tabindex="-1"></a><span class="co">#&gt; [13] plyr_1.8.9         jsonlite_2.0.0     Matrix_1.7-5       survival_3.8-6    </span></span>
+<span id="cb75-32"><a href="#cb75-32" tabindex="-1"></a><span class="co">#&gt; [17] scales_1.4.0       codetools_0.2-20   jquerylib_0.1.4    cli_3.6.6         </span></span>
+<span id="cb75-33"><a href="#cb75-33" tabindex="-1"></a><span class="co">#&gt; [21] rlang_1.2.0        cowplot_1.2.0      splines_4.5.1      withr_3.0.2       </span></span>
+<span id="cb75-34"><a href="#cb75-34" tabindex="-1"></a><span class="co">#&gt; [25] cachem_1.1.0       yaml_2.3.11        otel_0.2.0         tools_4.5.1       </span></span>
+<span id="cb75-35"><a href="#cb75-35" tabindex="-1"></a><span class="co">#&gt; [29] parallel_4.5.1     reshape2_1.4.5     dplyr_1.1.4        vctrs_0.7.3       </span></span>
+<span id="cb75-36"><a href="#cb75-36" tabindex="-1"></a><span class="co">#&gt; [33] R6_2.6.1           lifecycle_1.0.5    stringr_1.6.0      pkgconfig_2.0.3   </span></span>
+<span id="cb75-37"><a href="#cb75-37" tabindex="-1"></a><span class="co">#&gt; [37] pillar_1.11.1      bslib_0.10.0       gtable_0.3.6       glue_1.8.1        </span></span>
+<span id="cb75-38"><a href="#cb75-38" tabindex="-1"></a><span class="co">#&gt; [41] Rcpp_1.1.1-1.1     xfun_0.54          tibble_3.3.0       tidyselect_1.2.1  </span></span>
+<span id="cb75-39"><a href="#cb75-39" tabindex="-1"></a><span class="co">#&gt; [45] knitr_1.51         dichromat_2.0-0.1  farver_2.1.2       htmltools_0.5.9   </span></span>
+<span id="cb75-40"><a href="#cb75-40" tabindex="-1"></a><span class="co">#&gt; [49] patchwork_1.3.2    rmarkdown_2.31     labeling_0.4.3     compiler_4.5.1    </span></span>
+<span id="cb75-41"><a href="#cb75-41" tabindex="-1"></a><span class="co">#&gt; [53] S7_0.2.2</span></span></code></pre></div>
 </div>
 </div>
 

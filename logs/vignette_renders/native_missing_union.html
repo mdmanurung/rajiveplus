@@ -353,30 +353,39 @@ every block.</p>
 <p>The blocks share a latent sample trend but cover different subsets of
 samples, similar to a study where not every assay was measured for every
 participant.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>all_samples <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;sample_%02d&quot;</span>, <span class="fu">seq_len</span>(<span class="dv">30</span>))</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>latent <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">seq</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="fu">length</span>(all_samples)) <span class="sc">+</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                             <span class="fu">rnorm</span>(<span class="fu">length</span>(all_samples), <span class="at">sd =</span> <span class="fl">0.15</span>)))</span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>make_block <span class="ot">&lt;-</span> <span class="cf">function</span>(sample_idx, n_features, prefix, <span class="at">noise =</span> <span class="fl">0.20</span>) {</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  loadings <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fl">1.2</span>, <span class="fl">0.4</span>, <span class="at">length.out =</span> n_features) <span class="sc">*</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="fu">sample</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>), n_features, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">outer</span>(latent[sample_idx], loadings) <span class="sc">+</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="fu">matrix</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(sample_idx) <span class="sc">*</span> n_features, <span class="at">sd =</span> noise),</span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>           <span class="at">nrow =</span> <span class="fu">length</span>(sample_idx))</span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="fu">rownames</span>(x) <span class="ot">&lt;-</span> all_samples[sample_idx]</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="fu">colnames</span>(x) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="st">&quot;_&quot;</span>, <span class="fu">seq_len</span>(n_features))</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  x</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>}</span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
-<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>raw_blocks <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">celltype =</span> <span class="fu">make_block</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">18</span>, <span class="dv">6</span>, <span class="st">&quot;cell&quot;</span>),</span>
-<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">cytokine_6h =</span> <span class="fu">make_block</span>(<span class="dv">7</span><span class="sc">:</span><span class="dv">24</span>, <span class="dv">5</span>, <span class="st">&quot;cy6&quot;</span>),</span>
-<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="at">enzyme_24h =</span> <span class="fu">make_block</span>(<span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="dv">15</span><span class="sc">:</span><span class="dv">24</span>), <span class="dv">4</span>, <span class="st">&quot;enz&quot;</span>)</span>
-<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>)</span>
-<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a></span>
-<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>raw_blocks<span class="sc">$</span>cytokine_6h[<span class="dv">2</span>, <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
-<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">5</span>, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
-<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">6</span>, ] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>all_samples <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;sample_%02d&quot;</span>, <span class="fu">seq_len</span>(<span class="dv">50</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>joint_scores <span class="ot">&lt;-</span> <span class="fu">scale</span>(<span class="fu">cbind</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="fu">length</span>(all_samples)) <span class="sc">+</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="fu">length</span>(all_samples), <span class="at">sd =</span> <span class="fl">0.15</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="fu">sin</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">2</span> <span class="sc">*</span> pi, <span class="at">length.out =</span> <span class="fu">length</span>(all_samples))) <span class="sc">+</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="fu">length</span>(all_samples), <span class="at">sd =</span> <span class="fl">0.15</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>))</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>make_block <span class="ot">&lt;-</span> <span class="cf">function</span>(sample_idx, n_features, prefix, <span class="at">noise =</span> <span class="fl">0.45</span>) {</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  joint_loadings <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.8</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.6</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  )</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  individual_score <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(sample_idx))))</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  individual_loadings <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.35</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  x <span class="ot">&lt;-</span> joint_scores[sample_idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>] <span class="sc">%*%</span> <span class="fu">t</span>(joint_loadings) <span class="sc">+</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>    <span class="fu">outer</span>(individual_score, individual_loadings) <span class="sc">+</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>    <span class="fu">matrix</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(sample_idx) <span class="sc">*</span> n_features, <span class="at">sd =</span> noise),</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>           <span class="at">nrow =</span> <span class="fu">length</span>(sample_idx))</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="fu">rownames</span>(x) <span class="ot">&lt;-</span> all_samples[sample_idx]</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="fu">colnames</span>(x) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="st">&quot;_&quot;</span>, <span class="fu">seq_len</span>(n_features))</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  x</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>}</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>raw_blocks <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="at">celltype =</span> <span class="fu">make_block</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">42</span>, <span class="dv">96</span>, <span class="st">&quot;cell&quot;</span>),</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  <span class="at">cytokine_6h =</span> <span class="fu">make_block</span>(<span class="dv">10</span><span class="sc">:</span><span class="dv">50</span>, <span class="dv">104</span>, <span class="st">&quot;cy6&quot;</span>),</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>  <span class="at">enzyme_24h =</span> <span class="fu">make_block</span>(<span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>, <span class="dv">31</span><span class="sc">:</span><span class="dv">50</span>), <span class="dv">88</span>, <span class="st">&quot;enz&quot;</span>)</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>)</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>raw_blocks<span class="sc">$</span>cytokine_6h[<span class="dv">2</span>, <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">5</span>, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">6</span>, ] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span></code></pre></div>
 </div>
 <div id="align-to-the-sample-union" class="section level2">
 <h2>Align to the sample union</h2>
@@ -417,9 +426,9 @@ actually observed.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">24</td>
-<td align="right">7</td>
-<td align="right">17</td>
+<td align="right">50</td>
+<td align="right">27</td>
+<td align="right">23</td>
 </tr>
 </tbody>
 </table>
@@ -428,33 +437,41 @@ actually observed.</p>
 <h2>Fit native missing-data RaJIVE</h2>
 <p>Native mode excludes missing cells from preprocessing, rank
 diagnostics, and the observed-entry objective. Here
-<code>joint_rank = NA</code> triggers native candidate-rank diagnostics
-and selects from the supplied candidate set.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fit_union <span class="ot">&lt;-</span> <span class="fu">Rajive</span>(</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  blocks_union,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">initial_signal_ranks =</span> <span class="fu">c</span>(<span class="dv">2</span><span class="dt">L</span>, <span class="dv">2</span><span class="dt">L</span>, <span class="dv">2</span><span class="dt">L</span>),</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">missing =</span> <span class="st">&quot;native&quot;</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">mask =</span> mask,</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">joint_rank =</span> <span class="cn">NA</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">full =</span> <span class="cn">FALSE</span>,</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">missing_control =</span> <span class="fu">rajive_missing_control</span>(</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>    <span class="at">center =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>    <span class="at">scale =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>    <span class="at">normalize =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>    <span class="at">rank_candidates =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">2</span></span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  ),</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">4202</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>)</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; Rajive() uses identifiability_norm = &quot;l2&quot; by default; use &quot;l1&quot; for closer</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt; original RaJIVE parity.</span></span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a></span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  <span class="at">selected_joint_rank =</span> <span class="fu">get_joint_rank</span>(fit_union),</span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">candidate_ranks =</span> <span class="fu">paste</span>(fit_union<span class="sc">$</span>missing<span class="sc">$</span>rank_diagnostics<span class="sc">$</span>joint_rank,</span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>                          <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)</span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>)</span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;   selected_joint_rank candidate_ranks</span></span>
-<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; 1                   0         0, 1, 2</span></span></code></pre></div>
+<code>joint_rank = NA</code> triggers native candidate-rank diagnostics.
+Because <code>rank_candidates</code> is not set, the default candidate
+set is <code>0:min(initial_signal_ranks)</code>. The weighted low-rank
+completion steps use a missMDA-style singular-value shrinkage term to
+keep high initial signal ranks from overfitting observed entries.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>fit_union <span class="ot">&lt;-</span> <span class="fu">Rajive</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  blocks_union,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">initial_signal_ranks =</span> <span class="fu">c</span>(<span class="dv">7</span><span class="dt">L</span>, <span class="dv">6</span><span class="dt">L</span>, <span class="dv">8</span><span class="dt">L</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">missing =</span> <span class="st">&quot;native&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">mask =</span> mask,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">joint_rank =</span> <span class="cn">NA</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">full =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">n_perm_samples =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">identifiability_norm =</span> <span class="st">&quot;l2&quot;</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">num_cores =</span> <span class="dv">10</span><span class="dt">L</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">missing_control =</span> <span class="fu">rajive_missing_control</span>(</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>    <span class="at">center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    <span class="at">scale =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>    <span class="at">normalize =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>    <span class="at">rank_repeats =</span> <span class="dv">5</span><span class="dt">L</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>    <span class="at">svd_shrinkage =</span> <span class="st">&quot;missmda&quot;</span>,</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>    <span class="at">svd_shrinkage_coeff =</span> <span class="dv">1</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>    <span class="at">n_refits =</span> <span class="dv">10</span><span class="dt">L</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  ),</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">4202</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>)</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>  <span class="at">selected_joint_rank =</span> <span class="fu">get_joint_rank</span>(fit_union),</span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>  <span class="at">candidate_ranks =</span> <span class="fu">paste</span>(fit_union<span class="sc">$</span>missing<span class="sc">$</span>rank_diagnostics<span class="sc">$</span>joint_rank,</span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>                          <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>)</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;   selected_joint_rank     candidate_ranks</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; 1                   2 0, 1, 2, 3, 4, 5, 6</span></span></code></pre></div>
 </div>
 <div id="inspect-support-and-reconstruction-provenance" class="section level2">
 <h2>Inspect support and reconstruction provenance</h2>
@@ -492,32 +509,32 @@ estimable, or not identifiable.</p>
 <tbody>
 <tr class="odd">
 <td align="left">celltype</td>
-<td align="right">24</td>
-<td align="right">6</td>
-<td align="right">108</td>
-<td align="right">36</td>
-<td align="right">0.7500000</td>
-<td align="right">6</td>
+<td align="right">50</td>
+<td align="right">96</td>
+<td align="right">4032</td>
+<td align="right">768</td>
+<td align="right">0.8400000</td>
+<td align="right">8</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
 <td align="left">cytokine_6h</td>
-<td align="right">24</td>
-<td align="right">5</td>
-<td align="right">89</td>
-<td align="right">31</td>
-<td align="right">0.7416667</td>
-<td align="right">6</td>
+<td align="right">50</td>
+<td align="right">104</td>
+<td align="right">4263</td>
+<td align="right">937</td>
+<td align="right">0.8198077</td>
+<td align="right">9</td>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
 <td align="left">enzyme_24h</td>
-<td align="right">24</td>
-<td align="right">4</td>
-<td align="right">75</td>
-<td align="right">21</td>
-<td align="right">0.7812500</td>
-<td align="right">5</td>
+<td align="right">50</td>
+<td align="right">88</td>
+<td align="right">3871</td>
+<td align="right">529</td>
+<td align="right">0.8797727</td>
+<td align="right">6</td>
 <td align="right">0</td>
 </tr>
 </tbody>
@@ -525,12 +542,12 @@ estimable, or not identifiable.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(diag<span class="sc">$</span>variance_explained)</span></code></pre></div>
 <table>
 <colgroup>
-<col width="17%" />
-<col width="8%" />
-<col width="14%" />
-<col width="14%" />
-<col width="26%" />
-<col width="17%" />
+<col width="16%" />
+<col width="13%" />
+<col width="13%" />
+<col width="13%" />
+<col width="25%" />
+<col width="16%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -545,44 +562,44 @@ estimable, or not identifiable.</p>
 <tbody>
 <tr class="odd">
 <td align="left">celltype</td>
-<td align="right">0</td>
-<td align="right">0.9297861</td>
-<td align="right">0.0702139</td>
-<td align="right">0.7500000</td>
-<td align="right">1</td>
+<td align="right">0.5459068</td>
+<td align="right">0.2013072</td>
+<td align="right">0.2527860</td>
+<td align="right">0.8400000</td>
+<td align="right">0.8766634</td>
 </tr>
 <tr class="even">
 <td align="left">cytokine_6h</td>
-<td align="right">0</td>
-<td align="right">0.9622867</td>
-<td align="right">0.0377133</td>
-<td align="right">0.7416667</td>
-<td align="right">1</td>
+<td align="right">0.5290119</td>
+<td align="right">0.1881276</td>
+<td align="right">0.2828605</td>
+<td align="right">0.8198077</td>
+<td align="right">0.8365474</td>
 </tr>
 <tr class="odd">
 <td align="left">enzyme_24h</td>
-<td align="right">0</td>
-<td align="right">0.9795868</td>
-<td align="right">0.0204132</td>
-<td align="right">0.7812500</td>
-<td align="right">1</td>
+<td align="right">0.5541179</td>
+<td align="right">0.2284320</td>
+<td align="right">0.2174500</td>
+<td align="right">0.8797727</td>
+<td align="right">0.9852873</td>
 </tr>
 </tbody>
 </table>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>missing_labels <span class="ot">&lt;-</span> <span class="fu">get_estimability</span>(fit_union)</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>missing_labels <span class="ot">&lt;-</span> missing_labels[<span class="sc">!</span>missing_labels<span class="sc">$</span>observed, ]</span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(utils<span class="sc">::</span><span class="fu">head</span>(missing_labels, <span class="dv">12</span>))</span></code></pre></div>
-<table style="width:100%;">
+<table>
 <colgroup>
 <col width="3%" />
+<col width="10%" />
+<col width="4%" />
+<col width="4%" />
 <col width="11%" />
-<col width="5%" />
-<col width="5%" />
-<col width="12%" />
-<col width="14%" />
 <col width="12%" />
 <col width="11%" />
-<col width="22%" />
+<col width="10%" />
+<col width="31%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -599,136 +616,136 @@ estimable, or not identifiable.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">19</td>
-<td align="left">celltype</td>
-<td align="right">19</td>
-<td align="right">1</td>
-<td align="left">sample_19</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">20</td>
-<td align="left">celltype</td>
-<td align="right">20</td>
-<td align="right">1</td>
-<td align="left">sample_20</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
-<td align="left">21</td>
-<td align="left">celltype</td>
-<td align="right">21</td>
-<td align="right">1</td>
-<td align="left">sample_21</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">22</td>
-<td align="left">celltype</td>
-<td align="right">22</td>
-<td align="right">1</td>
-<td align="left">sample_22</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
-<td align="left">23</td>
-<td align="left">celltype</td>
-<td align="right">23</td>
-<td align="right">1</td>
-<td align="left">sample_23</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">24</td>
-<td align="left">celltype</td>
-<td align="right">24</td>
-<td align="right">1</td>
-<td align="left">sample_24</td>
-<td align="left">cell_1</td>
-<td align="left">joint</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
 <td align="left">43</td>
 <td align="left">celltype</td>
-<td align="right">19</td>
-<td align="right">2</td>
-<td align="left">sample_19</td>
-<td align="left">cell_2</td>
+<td align="right">43</td>
+<td align="right">1</td>
+<td align="left">sample_43</td>
+<td align="left">cell_1</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">44</td>
 <td align="left">celltype</td>
-<td align="right">20</td>
-<td align="right">2</td>
-<td align="left">sample_20</td>
-<td align="left">cell_2</td>
+<td align="right">44</td>
+<td align="right">1</td>
+<td align="left">sample_44</td>
+<td align="left">cell_1</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="odd">
 <td align="left">45</td>
 <td align="left">celltype</td>
-<td align="right">21</td>
-<td align="right">2</td>
-<td align="left">sample_21</td>
-<td align="left">cell_2</td>
+<td align="right">45</td>
+<td align="right">1</td>
+<td align="left">sample_45</td>
+<td align="left">cell_1</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">46</td>
 <td align="left">celltype</td>
-<td align="right">22</td>
-<td align="right">2</td>
-<td align="left">sample_22</td>
-<td align="left">cell_2</td>
+<td align="right">46</td>
+<td align="right">1</td>
+<td align="left">sample_46</td>
+<td align="left">cell_1</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="odd">
 <td align="left">47</td>
 <td align="left">celltype</td>
-<td align="right">23</td>
-<td align="right">2</td>
-<td align="left">sample_23</td>
-<td align="left">cell_2</td>
+<td align="right">47</td>
+<td align="right">1</td>
+<td align="left">sample_47</td>
+<td align="left">cell_1</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">48</td>
 <td align="left">celltype</td>
-<td align="right">24</td>
+<td align="right">48</td>
+<td align="right">1</td>
+<td align="left">sample_48</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">49</td>
+<td align="left">celltype</td>
+<td align="right">49</td>
+<td align="right">1</td>
+<td align="left">sample_49</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">50</td>
+<td align="left">celltype</td>
+<td align="right">50</td>
+<td align="right">1</td>
+<td align="left">sample_50</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">93</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
 <td align="right">2</td>
-<td align="left">sample_24</td>
+<td align="left">sample_43</td>
 <td align="left">cell_2</td>
 <td align="left">joint</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">94</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">2</td>
+<td align="left">sample_44</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">95</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">2</td>
+<td align="left">sample_45</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">96</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">2</td>
+<td align="left">sample_46</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 </tbody>
 </table>
@@ -740,14 +757,14 @@ estimable, or not identifiable.</p>
 <table>
 <colgroup>
 <col width="3%" />
+<col width="9%" />
+<col width="4%" />
+<col width="4%" />
 <col width="10%" />
-<col width="4%" />
-<col width="4%" />
 <col width="11%" />
-<col width="13%" />
-<col width="20%" />
-<col width="10%" />
-<col width="20%" />
+<col width="17%" />
+<col width="9%" />
+<col width="29%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -764,136 +781,136 @@ estimable, or not identifiable.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="left">19</td>
-<td align="left">celltype</td>
-<td align="right">19</td>
-<td align="right">1</td>
-<td align="left">sample_19</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">20</td>
-<td align="left">celltype</td>
-<td align="right">20</td>
-<td align="right">1</td>
-<td align="left">sample_20</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
-<td align="left">21</td>
-<td align="left">celltype</td>
-<td align="right">21</td>
-<td align="right">1</td>
-<td align="left">sample_21</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">22</td>
-<td align="left">celltype</td>
-<td align="right">22</td>
-<td align="right">1</td>
-<td align="left">sample_22</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
-<td align="left">23</td>
-<td align="left">celltype</td>
-<td align="right">23</td>
-<td align="right">1</td>
-<td align="left">sample_23</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="even">
-<td align="left">24</td>
-<td align="left">celltype</td>
-<td align="right">24</td>
-<td align="right">1</td>
-<td align="left">sample_24</td>
-<td align="left">cell_1</td>
-<td align="left">joint_individual</td>
-<td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
-</tr>
-<tr class="odd">
 <td align="left">43</td>
 <td align="left">celltype</td>
-<td align="right">19</td>
-<td align="right">2</td>
-<td align="left">sample_19</td>
-<td align="left">cell_2</td>
+<td align="right">43</td>
+<td align="right">1</td>
+<td align="left">sample_43</td>
+<td align="left">cell_1</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">44</td>
 <td align="left">celltype</td>
-<td align="right">20</td>
-<td align="right">2</td>
-<td align="left">sample_20</td>
-<td align="left">cell_2</td>
+<td align="right">44</td>
+<td align="right">1</td>
+<td align="left">sample_44</td>
+<td align="left">cell_1</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="odd">
 <td align="left">45</td>
 <td align="left">celltype</td>
-<td align="right">21</td>
-<td align="right">2</td>
-<td align="left">sample_21</td>
-<td align="left">cell_2</td>
+<td align="right">45</td>
+<td align="right">1</td>
+<td align="left">sample_45</td>
+<td align="left">cell_1</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">46</td>
 <td align="left">celltype</td>
-<td align="right">22</td>
-<td align="right">2</td>
-<td align="left">sample_22</td>
-<td align="left">cell_2</td>
+<td align="right">46</td>
+<td align="right">1</td>
+<td align="left">sample_46</td>
+<td align="left">cell_1</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="odd">
 <td align="left">47</td>
 <td align="left">celltype</td>
-<td align="right">23</td>
-<td align="right">2</td>
-<td align="left">sample_23</td>
-<td align="left">cell_2</td>
+<td align="right">47</td>
+<td align="right">1</td>
+<td align="left">sample_47</td>
+<td align="left">cell_1</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 <tr class="even">
 <td align="left">48</td>
 <td align="left">celltype</td>
-<td align="right">24</td>
+<td align="right">48</td>
+<td align="right">1</td>
+<td align="left">sample_48</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">49</td>
+<td align="left">celltype</td>
+<td align="right">49</td>
+<td align="right">1</td>
+<td align="left">sample_49</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">50</td>
+<td align="left">celltype</td>
+<td align="right">50</td>
+<td align="right">1</td>
+<td align="left">sample_50</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">93</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
 <td align="right">2</td>
-<td align="left">sample_24</td>
+<td align="left">sample_43</td>
 <td align="left">cell_2</td>
 <td align="left">joint_individual</td>
 <td align="left">FALSE</td>
-<td align="left">not_identifiable</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">94</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">2</td>
+<td align="left">sample_44</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">95</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">2</td>
+<td align="left">sample_45</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">96</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">2</td>
+<td align="left">sample_46</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
 </tr>
 </tbody>
 </table>
@@ -903,7 +920,7 @@ names. Observed entries can be restored exactly with
 explicitly labelled by the provenance table.</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">vapply</span>(recon, nrow, <span class="fu">integer</span>(<span class="dv">1</span>))</span>
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt;    celltype cytokine_6h  enzyme_24h </span></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;          24          24          24</span></span></code></pre></div>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;          50          50          50</span></span></code></pre></div>
 </div>
 
 
