@@ -64,7 +64,7 @@
 #' Robust Angle-based Joint and Individual Variation Explained (RaJIVE)
 #'
 #' Computes the robust aJIVE decomposition of a list of multi-view data
-#' matrices into joint, block-individual, and residual (noise) components.
+#' matrices into joint, block-individual, and residual components.
 #' The robust SVD step uses an M-estimator (Huber loss) so the decomposition
 #' is resistant to a moderate fraction of element-wise outliers in any block.
 #'
@@ -139,7 +139,7 @@
 #'   \describe{
 #'     \item{\code{block_decomps}}{A list of length \eqn{3K}. For block
 #'       \eqn{k} (1-indexed): individual component at index
-#'       \eqn{3(k-1)+1}, joint component at \eqn{3(k-1)+2}, noise (residual)
+#'       \eqn{3(k-1)+1}, joint component at \eqn{3(k-1)+2}, residual
 #'       at \eqn{3(k-1)+3}. Each entry has fields \code{u}, \code{d},
 #'       \code{v}, and \code{full} (when \code{full = TRUE}).}
 #'     \item{\code{joint_scores}}{The \eqn{n \times r_J} shared joint score
@@ -695,10 +695,10 @@ get_final_decomposition_robustH <- function(X, joint_scores, sv_threshold, full=
 
 
   if(full){
-    jive_decomposition[['noise']] <- X - (jive_decomposition[['joint']][['full']] +
+    jive_decomposition[['residual']] <- X - (jive_decomposition[['joint']][['full']] +
                                             jive_decomposition[['individual']][['full']])
   } else{
-    jive_decomposition[['noise']] <- NA
+    jive_decomposition[['residual']] <- NA
   }
 
   jive_decomposition
@@ -755,7 +755,7 @@ get_joint_decomposition_robustH <- function(X, joint_scores, full=TRUE){
   # Degenerate case: the identifiability filter removed every joint
   # component (or the user supplied joint_rank = 0).  Return a zero
   # decomposition so downstream `final_decomposition` can compute the
-  # noise as X - 0 - I correctly without invoking the C++ M-estimator
+  # residual as X - 0 - I correctly without invoking the C++ M-estimator
   # on a zero matrix (which fails to converge: `solve(): solution not
   # found`).
   if (is.null(joint_rank) || joint_rank == 0L) {

@@ -9,10 +9,10 @@ library(rajiveplus)
 # This gives fully deterministic, seed-reproducible results.
 #
 # block_decomps structure: mapply(SIMPLIFY=TRUE) returns a 3 x K list matrix:
-#   row 1 = individual decomp, row 2 = joint decomp, row 3 = noise
+#   row 1 = individual decomp, row 2 = joint decomp, row 3 = residual
 # Column-major linear index: individual_k = [[3*(k-1)+1]],
 #                            joint_k      = [[3*(k-1)+2]],
-#                            noise_k      = [[3*(k-1)+3]]
+#                            residual_k   = [[3*(k-1)+3]]
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -27,10 +27,10 @@ make_blocks <- function(K, n, pks, rankJ, rankA, seed) {
        initial_signal_ranks = rankA)
 }
 
-# Access block k's individual / joint / noise from block_decomps (3 x K matrix)
+# Access block k's individual / joint / residual from block_decomps (3 x K matrix)
 bd_individual <- function(res, k) res$block_decomps[[3L * (k - 1L) + 1L]]
 bd_joint      <- function(res, k) res$block_decomps[[3L * (k - 1L) + 2L]]
-bd_noise      <- function(res, k) res$block_decomps[[3L * (k - 1L) + 3L]]
+bd_residual   <- function(res, k) res$block_decomps[[3L * (k - 1L) + 3L]]
 
 # Sign-invariant comparison of column spaces (projection matrices).
 expect_colspace_equal <- function(A, B, tol = 1e-5, label = "column space") {
@@ -84,7 +84,7 @@ test_that("Rajive full=TRUE: X = J + I + E for each block (K=2)", {
     X  <- d$blocks[[k]]
     J  <- bd_joint(res, k)$full
     I  <- bd_individual(res, k)$full
-    E  <- bd_noise(res, k)
+    E  <- bd_residual(res, k)
     expect_equal(J + I + E, X, tolerance = 1e-8,
                  label = paste0("X = J + I + E, block ", k))
   }
@@ -100,7 +100,7 @@ test_that("Rajive full=TRUE: X = J + I + E for each block (K=3)", {
     X  <- d$blocks[[k]]
     J  <- bd_joint(res, k)$full
     I  <- bd_individual(res, k)$full
-    E  <- bd_noise(res, k)
+    E  <- bd_residual(res, k)
     expect_equal(J + I + E, X, tolerance = 1e-8,
                  label = paste0("X = J + I + E, block ", k))
   }
@@ -128,8 +128,8 @@ test_that("Rajive full=FALSE: joint/individual SVD components are present withou
                 label = paste0("joint full omitted for block ", k))
     expect_true(is.na(individual$full),
                 label = paste0("individual full omitted for block ", k))
-    expect_true(is.na(bd_noise(res, k)),
-                label = paste0("noise omitted for block ", k))
+    expect_true(is.na(bd_residual(res, k)),
+                label = paste0("residual omitted for block ", k))
   }
 })
 

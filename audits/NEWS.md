@@ -1,5 +1,13 @@
 # rajiveplus (development)
 
+## Breaking changes
+
+- Decomposition component vocabulary now uses `residual` instead of `noise`.
+  `get_block_matrix(type = "residual")` returns the third component, while
+  `get_block_matrix(type = "noise")` now errors with migration guidance.
+  Public variance and diagnostic outputs now use `Joint`/`Individual`/
+  `Residual` labels.
+
 ## Performance
 
 - `jackstraw_rajive()` null F-statistic generation now reuses centered block
@@ -12,8 +20,8 @@
 
 - `extract_components(..., what = "variance", format = "long")` and
   `fortify.rajive(..., what = "variance")` now return tidy columns
-  `block`, `component`, and `proportion`; the historical wide
-  `Joint`/`Indiv`/`Resid` output remains the default for `format = "wide"`.
+  `block`, `component`, and `proportion`; wide output uses the same
+  `Joint`/`Individual`/`Residual` component labels.
 
 - Categorical and batch association helpers now accept only `NULL` or
   `"kruskal"` and report `"kruskal"` truthfully.  Unsupported labels such as
@@ -126,7 +134,7 @@
 - Added `joint_variance_partition()` for feature-level joint/individual/
   residual sum-of-squares decomposition.  The function requires the original
   `blocks` and computes residuals explicitly as `X - J - I` instead of
-  trusting the optional noise slot.
+  trusting the optional residual slot.
 
 - `assess_stability()` can now attach bootstrap replicate arrays via
   `return_replicates = TRUE`, and accepts cluster/strata resampling arguments.

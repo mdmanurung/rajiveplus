@@ -16,13 +16,13 @@ make_audit_assoc_fit <- function() {
     d = c(2, 1),
     v = diag(2)
   )
-  noise <- matrix(0, nrow = n, ncol = 1L)
+  residual <- matrix(0, nrow = n, ncol = 1L)
 
   structure(
     list(
       joint_scores = joint_scores,
       joint_rank = 2L,
-      block_decomps = list(indiv, joint, noise, indiv, joint, noise)
+      block_decomps = list(indiv, joint, residual, indiv, joint, residual)
     ),
     class = "rajive"
   )

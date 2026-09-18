@@ -366,7 +366,7 @@ individual structure, or residual variation.
 ```{r var-plot}
 plot_variance_explained(cll_fit, blocks) +
   labs(title    = "CLL multi-omics: variance decomposition",
-       subtitle = "Joint, Individual, and Noise components per block") +
+       subtitle = "Joint, Individual, and Residual components per block") +
   theme_bw()
 ```
 

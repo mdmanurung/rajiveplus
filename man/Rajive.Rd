@@ -100,7 +100,7 @@ An object of class \code{"rajive"}: a named list containing
   \describe{
     \item{\code{block_decomps}}{A list of length \eqn{3K}. For block
       \eqn{k} (1-indexed): individual component at index
-      \eqn{3(k-1)+1}, joint component at \eqn{3(k-1)+2}, noise (residual)
+      \eqn{3(k-1)+1}, joint component at \eqn{3(k-1)+2}, residual
       at \eqn{3(k-1)+3}. Each entry has fields \code{u}, \code{d},
       \code{v}, and \code{full} (when \code{full = TRUE}).}
     \item{\code{joint_scores}}{The \eqn{n \times r_J} shared joint score
@@ -117,7 +117,7 @@ An object of class \code{"rajive"}: a named list containing
 }
 \description{
 Computes the robust aJIVE decomposition of a list of multi-view data
-matrices into joint, block-individual, and residual (noise) components.
+matrices into joint, block-individual, and residual components.
 The robust SVD step uses an M-estimator (Huber loss) so the decomposition
 is resistant to a moderate fraction of element-wise outliers in any block.
 }

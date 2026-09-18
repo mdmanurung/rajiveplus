@@ -30,7 +30,7 @@ test_that("masked variance explained partitions complete-data variance", {
   W <- matrix(TRUE, nrow = 2, ncol = 2)
 
   got <- rajiveplus:::.masked_variance_explained(X, J, I, W)
-  expect_equal(sum(got[c("Joint", "Indiv", "Resid")]), 1, tolerance = 1e-12)
+  expect_equal(sum(got[c("Joint", "Individual", "Residual")]), 1, tolerance = 1e-12)
   expect_equal(got[["observed_fraction"]], 1)
 })
 

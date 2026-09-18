@@ -125,14 +125,14 @@ test_that("a native fit does not mutate the global RNG state", {
 test_that(".masked_variance_explained never reports negative residual variance", {
   # Regression for audit F8: residual_prop is clamped at zero, so even when
   # joint + individual jointly carry more energy than the observed
-  # sum-of-squares the reported `Resid` is non-negative.
+  # sum-of-squares the reported `Residual` is non-negative.
   x <- matrix(c(1, 1, 1, 1), 2, 2)
   joint <- matrix(c(1, 1, 1, 1), 2, 2)        # sum(joint^2)      = sum(x^2)
   individual <- matrix(c(1, 1, 1, 1), 2, 2)   # sum(individual^2) = sum(x^2)
   mask <- matrix(TRUE, 2, 2)
 
   ve <- rajiveplus:::.masked_variance_explained(x, joint, individual, mask)
-  expect_gte(ve[["Resid"]], -1e-8)
+  expect_gte(ve[["Residual"]], -1e-8)
 })
 
 test_that("a sample missing from every block is dropped with a warning", {

@@ -4,7 +4,7 @@
 \alias{get_block_matrix}
 \title{Extract a reconstructed block matrix}
 \usage{
-get_block_matrix(ajive_output, k, type = c("joint", "individual", "noise"))
+get_block_matrix(ajive_output, k, type = c("joint", "individual", "residual"))
 }
 \arguments{
 \item{ajive_output}{List returned by \code{\link{Rajive}}.}
@@ -12,7 +12,7 @@ get_block_matrix(ajive_output, k, type = c("joint", "individual", "noise"))
 \item{k}{Positive integer; index of the data block.}
 
 \item{type}{Character string; one of \code{"joint"}, \code{"individual"},
-or \code{"noise"}.}
+or \code{"residual"}.}
 }
 \value{
 The reconstructed matrix for the requested component and block.
@@ -21,7 +21,7 @@ The reconstructed matrix for the requested component and block.
 }
 \description{
 Returns the full reconstructed matrix for the joint (\eqn{J}), individual
-(\eqn{I}), or noise (\eqn{E}) component of a single data block from a
+(\eqn{I}), or residual (\eqn{E}) component of a single data block from a
 RaJIVE decomposition.
 }
 \examples{

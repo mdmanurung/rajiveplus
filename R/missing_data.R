@@ -562,13 +562,13 @@
   individual_prop <- sum(individual[mask]^2) / denom
   # Clamp at zero: the 1 - J - I identity only holds when joint and individual
   # are orthogonal at the observed cells, which they need not be; without the
-  # clamp `Resid` can be reported below zero whenever the two fits jointly
+  # clamp `Residual` can be reported below zero whenever the two fits jointly
   # carry more energy than the observed sum-of-squares (audit finding F8).
   residual_prop <- max(0, 1 - joint_prop - individual_prop)
   c(
     Joint = joint_prop,
-    Indiv = individual_prop,
-    Resid = residual_prop,
+    Individual = individual_prop,
+    Residual = residual_prop,
     observed_fraction = mean(mask),
     observed_ss = denom
   )
@@ -749,7 +749,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
 }
 
 .fit_component_matrix <- function(fit, k, type, dimnames = NULL) {
-  type <- match.arg(type, c("joint", "individual", "noise"))
+  type <- match.arg(type, c("joint", "individual", "residual"))
   if (type == "joint") {
     idx <- 3L * (k - 1L) + 2L
   } else if (type == "individual") {
@@ -758,7 +758,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     idx <- 3L * k
   }
   component <- fit$block_decomps[[idx]]
-  if (type == "noise" && is.matrix(component)) {
+  if (type == "residual" && is.matrix(component)) {
     out <- component
     if (!is.null(dimnames)) dimnames(out) <- dimnames
     return(out)
@@ -868,9 +868,9 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     )
   }
 
-  noise <- matrix(0, nrow = nrow(x), ncol = ncol(x), dimnames = dimnames(x))
-  noise[mask] <- x[mask] - joint_full[mask] - individual_full[mask]
-  list(individual = indiv_decomp, joint = joint_decomp, noise = noise)
+  residual <- matrix(0, nrow = nrow(x), ncol = ncol(x), dimnames = dimnames(x))
+  residual[mask] <- x[mask] - joint_full[mask] - individual_full[mask]
+  list(individual = indiv_decomp, joint = joint_decomp, residual = residual)
 }
 
 .fit_native_standardized_once <- function(blocks, mask, initial_signal_ranks,
@@ -947,7 +947,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     )
     block_decomps[[3L * (k - 1L) + 1L]] <- decomp$individual
     block_decomps[[3L * (k - 1L) + 2L]] <- decomp$joint
-    block_decomps[[3L * k]] <- decomp$noise
+    block_decomps[[3L * k]] <- decomp$residual
     joint_full <- .component_matrix_from_decomp(decomp$joint, dimnames(blocks[[k]]))
     individual_full <- .component_matrix_from_decomp(decomp$individual,
                                                      dimnames(blocks[[k]]))

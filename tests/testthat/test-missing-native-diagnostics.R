@@ -31,7 +31,7 @@ test_that("missing diagnostics expose variance, support, and convergence", {
   expect_true(is.data.frame(diag$orthogonality))
   expect_true(all(is.finite(diag$orthogonality$max_abs_crossprod)))
   expect_true(is.list(diag$convergence))
-  expect_true(all(c("Joint", "Indiv", "Resid") %in% names(diag$variance_explained)))
+  expect_true(all(c("Joint", "Individual", "Residual") %in% names(diag$variance_explained)))
 })
 
 test_that("plot_missingness returns a ggplot object", {

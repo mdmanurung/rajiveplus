@@ -481,7 +481,7 @@ for (k in 1:K) {
                                              ylab = ifelse(k == 1, "individual", ""),
                                              show_color_bar = FALSE)
   heatmap_listR[[3 * K + k]] <- data_heatmap(jive_results_robust$block_decomps[[3*k]],
-                                             ylab = ifelse(k == 1, "noise", ""), show_color_bar = FALSE)
+                                             ylab = ifelse(k == 1, "residual", ""), show_color_bar = FALSE)
 }
 cowplot::plot_grid(plotlist = heatmap_listR, ncol = K)
 }
@@ -581,15 +581,15 @@ showVarExplained_robust <- function(ajiveResults, blocks){
 
   # individual variances
   # individual is the first component for all 3
-  VarIndiv = rep(0, l)
-  for (i in 1:l) VarIndiv[i] = sum(ajiveResults$block_decomps[[3*(i-1)+1]][["d"]]^2) /
+  VarIndividual = rep(0, l)
+  for (i in 1:l) VarIndividual[i] = sum(ajiveResults$block_decomps[[3*(i-1)+1]][["d"]]^2) /
                                     norm(blocks[[i]], type = "F")^2
 
   # residual variance
-  VarSubtr = 1 - VarJoint - VarIndiv
+  VarResidual = 1 - VarJoint - VarIndividual
 
-  VarProp <- list(VarJoint, VarIndiv, VarSubtr)
-  names(VarProp) <- c('Joint', 'Indiv', 'Resid')
+  VarProp <- list(VarJoint, VarIndividual, VarResidual)
+  names(VarProp) <- c('Joint', 'Individual', 'Residual')
   VarProp
 }
 
@@ -601,7 +601,7 @@ showVarExplained_robust <- function(ajiveResults, blocks){
 # Internal helper: number of data blocks from a rajive decomposition.
 # block_decomps is a 3 x K list-matrix from mapply, stored column-by-column:
 #   [ I_1, J_1, E_1, I_2, J_2, E_2, ... ]
-# where I = individual, J = joint, E = noise.  So length(block_decomps) == 3*K.
+# where I = individual, J = joint, E = residual.  So length(block_decomps) == 3*K.
 n_blocks_from_decomp <- function(ajive_output) {
   length(ajive_output$block_decomps) / 3L
 }
@@ -698,13 +698,13 @@ get_joint_scores <- function(ajive_output) {
 #' Extract a reconstructed block matrix
 #'
 #' Returns the full reconstructed matrix for the joint (\eqn{J}), individual
-#' (\eqn{I}), or noise (\eqn{E}) component of a single data block from a
+#' (\eqn{I}), or residual (\eqn{E}) component of a single data block from a
 #' RaJIVE decomposition.
 #'
 #' @param ajive_output List returned by \code{\link{Rajive}}.
 #' @param k Positive integer; index of the data block.
 #' @param type Character string; one of \code{"joint"}, \code{"individual"},
-#'   or \code{"noise"}.
+#'   or \code{"residual"}.
 #'
 #' @return The reconstructed matrix for the requested component and block.
 #'   Returns \code{NA} if \code{\link{Rajive}} was called with
@@ -720,12 +720,21 @@ get_joint_scores <- function(ajive_output) {
 #' }
 #'
 #' @export
-get_block_matrix <- function(ajive_output, k, type = c("joint", "individual", "noise")) {
+get_block_matrix <- function(ajive_output, k, type = c("joint", "individual", "residual")) {
+  if (!missing(type) && length(type) == 1L && identical(type, "noise")) {
+    cli::cli_abort(
+      c(
+        '`type = "noise"` has been replaced by `type = "residual"`.',
+        "i" = 'Use `type = "residual"` to request the Residual component.'
+      ),
+      class = "rajiveplus_residual_vocabulary_error"
+    )
+  }
   type <- match.arg(type)
-  # block_decomps layout per block k: individual at 3k-2, joint at 3k-1, noise at 3k
+  # block_decomps layout per block k: individual at 3k-2, joint at 3k-1, residual at 3k
   if (type == "joint")       return(ajive_output$block_decomps[[3L * (k - 1L) + 2L]][["full"]])
   if (type == "individual")  return(ajive_output$block_decomps[[3L * (k - 1L) + 1L]][["full"]])
-  if (type == "noise")       return(ajive_output$block_decomps[[3L * k]])
+  if (type == "residual")    return(ajive_output$block_decomps[[3L * k]])
 }
 
 
@@ -797,8 +806,8 @@ plot_variance_explained <- function(ajive_output, blocks) {
                   rep("Individual", K),
                   rep("Residual",   K)),
     proportion = c(unlist(var_exp[["Joint"]]),
-                   unlist(var_exp[["Indiv"]]),
-                   unlist(var_exp[["Resid"]])),
+                   unlist(var_exp[["Individual"]]),
+                   unlist(var_exp[["Residual"]])),
     stringsAsFactors = FALSE
   )
   plot_df$component <- factor(plot_df$component,

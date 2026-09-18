@@ -168,8 +168,8 @@ plot_components(mb_fit, plot_type = "ajive_diagnostic") +
 ind_rank_df <- data.frame(
   Kingdom       = kingdom_names,
   `Joint rank`  = jr,
-  `Indiv. rank` = sapply(seq_along(kingdom_names), function(i)
-                    get_individual_rank(mb_fit, i)),
+  `Individual rank` = sapply(seq_along(kingdom_names), function(i)
+                        get_individual_rank(mb_fit, i)),
   stringsAsFactors = FALSE,
   check.names = FALSE
 )
