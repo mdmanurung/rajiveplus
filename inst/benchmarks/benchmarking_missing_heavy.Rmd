@@ -1,0 +1,388 @@
+---
+title: "Native Missing-Data RaJIVE: Where It Scales and Where It Recovers"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r opts}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.width = 7,
+  fig.height = 4,
+  message   = FALSE,
+  warning   = FALSE
+)
+find_repo_root <- function(path = getwd()) {
+  path <- normalizePath(path, mustWork = TRUE)
+  repeat {
+    if (file.exists(file.path(path, "DESCRIPTION")) &&
+        file.exists(file.path(path, "_pkgdown.yml"))) {
+      return(path)
+    }
+    parent <- dirname(path)
+    if (identical(parent, path)) {
+      stop("Could not locate repository root from ", getwd(), call. = FALSE)
+    }
+    path <- parent
+  }
+}
+repo_root <- find_repo_root()
+data_dir <- file.path(repo_root, "vignettes", "data")
+dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Smoke mode (BENCH_MISSING_SMOKE=1): one value per axis, one seed -- used to
+# confirm the artifact runs end to end before committing the full SLURM grid.
+SMOKE <- Sys.getenv("BENCH_MISSING_SMOKE") == "1"
+```
+
+## The question
+
+`vignettes/native_missing_union.Rmd` shows the native missing-data workflow on
+partially overlapping multi-block studies: align each block to the union of
+samples, keep absent block/sample rows as missing, and fit RaJIVE over the
+observed entries. The audit `audits/2026-05-15-missing-data-audit.md` found the
+estimator sound but single-pass at the JIVE level, with a partial port of
+missMDA's regularized EM already in place (`svd_shrinkage = "missmda"`).
+
+This artifact measures the two things that matter for that estimator:
+
+1. **Where does it stop scaling?** Wall time and peak memory as missingness,
+   block count, cross-block overlap, and `(n, p)` size grow.
+2. **Where does it stop recovering the truth?** Reconstruction RMSE at the
+   unobserved cells, and whether native auto-rank recovers the true joint rank.
+
+Every axis is crossed with `svd_shrinkage in {0, "missmda"}`, so the headline
+contrast quantifies how much the partial missMDA port already buys before the
+joint-level EM (audit finding F1) lands. This heavy artifact is **not** a
+package vignette; render it only through SLURM.
+
+## Setup
+
+```{r setup}
+required <- c("rajiveplus", "peakRAM", "ggplot2")
+missing_pkgs <- required[!vapply(required, requireNamespace,
+                                 logical(1), quietly = TRUE)]
+if (length(missing_pkgs) > 0L) {
+  stop("Missing local package(s) for the missing-data benchmark: ",
+       paste(missing_pkgs, collapse = ", "), ".", call. = FALSE)
+}
+library(rajiveplus)
+library(peakRAM)
+library(ggplot2)
+
+has_missmda <- requireNamespace("missMDA", quietly = TRUE)
+```
+
+```{r simulator}
+# simulate_missing_benchmark(): extends vignettes/native_missing_union.Rmd.
+# K blocks share a joint structure (rankJ) and each carries its own
+# individual structure plus noise. A core of round(overlap_frac * n) samples
+# is observed by every block; the rest are split into K block-exclusive
+# slices. Each block is aligned to the n-sample union (absent samples -> NA),
+# then `missing_frac` of the *observed* cells are blanked MCAR and one whole
+# observed row per block is dropped (mirroring the vignette).
+#
+# Returns: blocks_union, mask, truth (noise-free joint+individual on the
+# union), and the true joint rank.
+simulate_missing_benchmark <- function(n, p, K, rankJ = 2L,
+                                       overlap_frac = 0.6,
+                                       missing_frac = 0.15,
+                                       noise = 0.5, seed = 1L) {
+  set.seed(seed)
+  all_samples <- sprintf("sample_%04d", seq_len(n))
+  joint_scores <- matrix(rnorm(n * rankJ), n, rankJ)
+
+  n_core <- max(rankJ + 1L, round(overlap_frac * n))
+  n_core <- min(n_core, n)
+  core <- seq_len(n_core)
+  rest <- setdiff(seq_len(n), core)
+  slices <- if (length(rest) > 0L) {
+    split(rest, cut(seq_along(rest), breaks = K, labels = FALSE))
+  } else {
+    replicate(K, integer(0), simplify = FALSE)
+  }
+
+  to_union <- function(mat, idx, prefix) {
+    out <- matrix(NA_real_, n, ncol(mat),
+                  dimnames = list(all_samples,
+                                  paste0(prefix, "_", seq_len(ncol(mat)))))
+    out[idx, ] <- mat
+    out
+  }
+
+  blocks_union <- truth_union <- vector("list", K)
+  for (k in seq_len(K)) {
+    idx <- sort(c(core, slices[[k]]))
+    nk <- length(idx)
+    joint_loadings <- matrix(rnorm(p * rankJ, sd = 0.8), p, rankJ)
+    individual_score <- as.numeric(scale(rnorm(nk)))
+    individual_loadings <- rnorm(p, sd = 0.4)
+    signal <- joint_scores[idx, , drop = FALSE] %*% t(joint_loadings) +
+      outer(individual_score, individual_loadings)
+    x <- signal + matrix(rnorm(nk * p, sd = noise), nk, p)
+    prefix <- paste0("blk", k)
+    blocks_union[[k]] <- to_union(x, idx, prefix)
+    truth_union[[k]] <- to_union(signal, idx, prefix)
+  }
+  names(blocks_union) <- names(truth_union) <- paste0("blk", seq_len(K))
+
+  mask <- lapply(blocks_union, is.finite)
+  for (k in seq_len(K)) {
+    obs <- which(mask[[k]])
+    n_blank <- floor(missing_frac * length(obs))
+    if (n_blank > 0L) mask[[k]][sample(obs, n_blank)] <- FALSE
+    # Drop one whole observed row per block, picking a *distinct core* sample
+    # so it stays observed in the other blocks (mirrors the vignette's
+    # enzyme_24h[6, ] <- NA). Core samples are observed by every block. A
+    # distinct row per block is required because the package aborts on a
+    # sample observed in no block (audit finding F11) rather than dropping it.
+    drop_row <- core[((k - 1L) %% length(core)) + 1L]
+    mask[[k]][drop_row, ] <- FALSE
+  }
+
+  list(blocks_union = blocks_union, mask = mask, truth = truth_union,
+       rankJ = rankJ)
+}
+
+# recon RMSE at the cells the model did not see but whose truth is defined.
+recon_rmse <- function(fit, sim) {
+  recon <- get_reconstructed_blocks(fit, type = "joint_individual",
+                                    scale = "original")
+  num <- den <- 0
+  for (k in seq_along(recon)) {
+    score_cells <- !sim$mask[[k]] & is.finite(sim$truth[[k]])
+    if (!any(score_cells)) next
+    num <- num + sum((recon[[k]][score_cells] - sim$truth[[k]][score_cells])^2)
+    den <- den + sum(score_cells)
+  }
+  if (den == 0) NA_real_ else sqrt(num / den)
+}
+
+# missMDA imputeMFA reference RMSE on the same union matrix (optional).
+missmda_rmse <- function(sim) {
+  if (!has_missmda) return(NA_real_)
+  K <- length(sim$blocks_union)
+  filled <- do.call(cbind, lapply(seq_len(K), function(k) {
+    x <- sim$blocks_union[[k]]
+    x[!sim$mask[[k]]] <- NA_real_
+    x
+  }))
+  grp <- vapply(sim$blocks_union, ncol, integer(1))
+  imp <- tryCatch(
+    missMDA::imputeMFA(as.data.frame(filled), group = grp,
+                       type = rep("s", K), ncp = sim$rankJ),
+    error = function(e) NULL
+  )
+  if (is.null(imp)) return(NA_real_)
+  completed <- as.matrix(imp$completeObs)
+  truth_cat <- do.call(cbind, sim$truth)
+  offset <- 0
+  num <- den <- 0
+  for (k in seq_len(K)) {
+    cols <- offset + seq_len(grp[k])
+    score_cells <- !sim$mask[[k]] & is.finite(sim$truth[[k]])
+    if (any(score_cells)) {
+      blk_complete <- completed[, cols, drop = FALSE]
+      blk_truth <- sim$truth[[k]]
+      num <- num + sum((blk_complete[score_cells] - blk_truth[score_cells])^2)
+      den <- den + sum(score_cells)
+    }
+    offset <- offset + grp[k]
+  }
+  if (den == 0) NA_real_ else sqrt(num / den)
+}
+
+# One grid cell: fit at fixed rank (fit cost) and at joint_rank = NA (auto-rank
+# cost), record time, peak RAM, recon RMSE, rank recovery, weak support.
+run_missing_cell <- function(sim, shrinkage, seed) {
+  K <- length(sim$blocks_union)
+  isr <- rep(max(sim$rankJ + 2L, 4L), K)
+  ctrl <- rajive_missing_control(center = TRUE, scale = TRUE, normalize = TRUE,
+                                 svd_shrinkage = shrinkage, rank_repeats = 1L)
+  fixed_fit <- NULL
+  pr <- peakRAM::peakRAM(
+    fixed_fit <- Rajive(sim$blocks_union, initial_signal_ranks = isr,
+                        missing = "native", mask = sim$mask,
+                        joint_rank = sim$rankJ, full = FALSE,
+                        missing_control = ctrl, seed = seed)
+  )
+  auto_fit <- Rajive(sim$blocks_union, initial_signal_ranks = isr,
+                     missing = "native", mask = sim$mask,
+                     joint_rank = NA, full = FALSE,
+                     missing_control = ctrl, seed = seed)
+  rd <- auto_fit$missing$rank_diagnostics
+  selected <- get_joint_rank(auto_fit)
+  weak <- if (!is.null(rd)) {
+    rd$weak_support_rate[rd$joint_rank == selected][1L]
+  } else NA_real_
+  data.frame(
+    shrinkage = if (identical(shrinkage, 0)) "none" else "missmda",
+    seed = seed,
+    wall_s = pr$Elapsed_Time_sec,
+    peak_ram_mb = pr$Peak_RAM_Used_MiB,
+    recon_rmse = recon_rmse(fixed_fit, sim),
+    missmda_rmse = missmda_rmse(sim),
+    selected_rank = selected,
+    true_rank = sim$rankJ,
+    rank_correct = selected == sim$rankJ,
+    weak_support_rate = weak,
+    stringsAsFactors = FALSE
+  )
+}
+
+# Sweep one axis: `values` substituted into the baseline, crossed with
+# {0, "missmda"} shrinkage and `seeds`.
+run_sweep <- function(axis, values, baseline, seeds) {
+  rows <- list()
+  for (v in values) {
+    params <- baseline
+    params[[axis]] <- v
+    for (sh in list(0, "missmda")) {
+      for (s in seeds) {
+        sim <- do.call(simulate_missing_benchmark,
+                       c(params, list(seed = s)))
+        cell <- run_missing_cell(sim, sh, s)
+        cell[[axis]] <- v
+        rows[[length(rows) + 1L]] <- cell
+      }
+    }
+  }
+  out <- do.call(rbind, rows)
+  out[, c(axis, setdiff(names(out), axis))]
+}
+```
+
+```{r grid}
+baseline <- list(n = 120L, p = 100L, K = 3L, rankJ = 2L,
+                 overlap_frac = 0.6, missing_frac = 0.15, noise = 0.5)
+seeds <- if (SMOKE) 1L else 1:3
+
+grids <- if (SMOKE) {
+  list(missing_frac = 0.30, K = 3L, overlap_frac = 0.6, n = 120L)
+} else {
+  list(
+    missing_frac = c(0.05, 0.15, 0.30, 0.50),
+    K            = c(2L, 3L, 5L),
+    overlap_frac = c(0.3, 0.6, 0.9),
+    n            = c(60L, 120L, 240L, 480L)
+  )
+}
+# the `n` sweep scales p with n so both grow together
+size_baseline <- baseline
+```
+
+## Sweep 1 — missingness fraction
+
+```{r sweep-missingness}
+bench_missingness <- run_sweep("missing_frac", grids$missing_frac,
+                               baseline, seeds)
+saveRDS(bench_missingness,
+        file.path(data_dir, "bench_missing_missingness.rds"))
+knitr::kable(bench_missingness, digits = 3,
+             caption = "Native missing-data fit vs missingness fraction")
+```
+
+## Sweep 2 — number of blocks
+
+```{r sweep-nblocks}
+bench_nblocks <- run_sweep("K", grids$K, baseline, seeds)
+saveRDS(bench_nblocks, file.path(data_dir, "bench_missing_nblocks.rds"))
+knitr::kable(bench_nblocks, digits = 3,
+             caption = "Native missing-data fit vs number of blocks")
+```
+
+## Sweep 3 — cross-block overlap
+
+```{r sweep-overlap}
+bench_overlap <- run_sweep("overlap_frac", grids$overlap_frac, baseline, seeds)
+saveRDS(bench_overlap, file.path(data_dir, "bench_missing_overlap.rds"))
+knitr::kable(bench_overlap, digits = 3,
+             caption = "Native missing-data fit vs cross-block overlap")
+```
+
+## Sweep 4 — problem size (n, with p scaled alongside)
+
+```{r sweep-size}
+size_rows <- list()
+for (n_i in grids$n) {
+  params <- size_baseline
+  params$n <- n_i
+  params$p <- as.integer(round(n_i * 0.8))
+  for (sh in list(0, "missmda")) {
+    for (s in seeds) {
+      sim <- do.call(simulate_missing_benchmark, c(params, list(seed = s)))
+      cell <- run_missing_cell(sim, sh, s)
+      cell$n <- n_i
+      cell$p <- params$p
+      size_rows[[length(size_rows) + 1L]] <- cell
+    }
+  }
+}
+bench_size <- do.call(rbind, size_rows)
+bench_size <- bench_size[, c("n", "p",
+                             setdiff(names(bench_size), c("n", "p")))]
+saveRDS(bench_size, file.path(data_dir, "bench_missing_size.rds"))
+knitr::kable(bench_size, digits = 3,
+             caption = "Native missing-data fit vs problem size")
+```
+
+## Summary plots
+
+```{r plot-rmse-missingness}
+agg <- function(df, axis) {
+  stats::aggregate(
+    cbind(wall_s, peak_ram_mb, recon_rmse, rank_correct, weak_support_rate) ~
+      get(axis) + shrinkage,
+    data = df, FUN = function(x) mean(x, na.rm = TRUE)
+  ) |> setNames(c(axis, "shrinkage", "wall_s", "peak_ram_mb",
+                  "recon_rmse", "rank_recovery", "weak_support_rate"))
+}
+
+ggplot(agg(bench_missingness, "missing_frac"),
+       aes(missing_frac, recon_rmse, colour = shrinkage)) +
+  geom_line(linewidth = 1) + geom_point(size = 2.5) +
+  labs(title = "Reconstruction RMSE vs missingness fraction",
+       subtitle = "K=3, n=120, p=100, overlap=0.6; lower is better",
+       x = "Missingness fraction", y = "RMSE at unobserved cells") +
+  theme_bw()
+```
+
+```{r plot-rank-overlap}
+ggplot(agg(bench_overlap, "overlap_frac"),
+       aes(overlap_frac, rank_recovery, colour = shrinkage)) +
+  geom_line(linewidth = 1) + geom_point(size = 2.5) +
+  ylim(0, 1) +
+  labs(title = "Auto-rank recovery vs cross-block overlap",
+       subtitle = "Fraction of fits selecting the true joint rank",
+       x = "Cross-block overlap fraction", y = "Rank recovery rate") +
+  theme_bw()
+```
+
+```{r plot-time-size}
+ggplot(agg(bench_size, "n"),
+       aes(n, wall_s, colour = shrinkage)) +
+  geom_line(linewidth = 1) + geom_point(size = 2.5) +
+  labs(title = "Wall time vs problem size",
+       subtitle = "p scaled as 0.8 * n; fixed-rank fit",
+       x = "Sample size n", y = "Elapsed time (s)") +
+  theme_bw()
+```
+
+```{r missmda-note}
+if (has_missmda) {
+  cat("missMDA::imputeMFA reference RMSE is recorded in the `missmda_rmse`",
+      "column of every cached data frame for direct comparison.\n")
+} else {
+  cat("missMDA is not installed; `missmda_rmse` is NA. Install missMDA on the",
+      "render node to enable the regularized-EM reference comparison.\n")
+}
+```
+
+## Session info
+
+```{r session-info}
+sessionInfo()
+```

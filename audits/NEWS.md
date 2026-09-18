@@ -1,5 +1,13 @@
 # rajiveplus (development)
 
+## Breaking changes
+
+- Decomposition component vocabulary now uses `residual` instead of `noise`.
+  `get_block_matrix(type = "residual")` returns the third component, while
+  `get_block_matrix(type = "noise")` now errors with migration guidance.
+  Public variance and diagnostic outputs now use `Joint`/`Individual`/
+  `Residual` labels.
+
 ## Performance
 
 - `jackstraw_rajive()` null F-statistic generation now reuses centered block
@@ -12,8 +20,8 @@
 
 - `extract_components(..., what = "variance", format = "long")` and
   `fortify.rajive(..., what = "variance")` now return tidy columns
-  `block`, `component`, and `proportion`; the historical wide
-  `Joint`/`Indiv`/`Resid` output remains the default for `format = "wide"`.
+  `block`, `component`, and `proportion`; wide output uses the same
+  `Joint`/`Individual`/`Residual` component labels.
 
 - Categorical and batch association helpers now accept only `NULL` or
   `"kruskal"` and report `"kruskal"` truthfully.  Unsupported labels such as
@@ -34,6 +42,52 @@
   trailing entries were uninitialised.  No realistic call exercised the
   faulty path, but the fix removes the latent UB.
 
+- Native missing-data diagnostics and reconstructions now work with
+  `full = FALSE`. Internal reconstruction falls back to `u/d/v` component
+  fields when component `$full` matrices are intentionally omitted, while
+  `get_block_matrix()` keeps its existing `NA` return for omitted full
+  matrices.
+
+- Native missing-data fits now store `fit$missing$estimability` and
+  `fit$missing$reconstruction_provenance` during fit construction.
+  `get_reconstructed_blocks()` attaches matching provenance as a
+  `reconstruction_provenance` attribute on returned block lists.
+
+- Native automatic rank diagnostics now score candidate joint ranks by
+  holding out observed block/sample rows when possible, rather than by
+  reusing the fitted observed-entry residual objective. This fixes the
+  previous degeneracy where `joint_rank = NA` could always select the lowest
+  candidate, including rank 0, because smaller joint ranks left more
+  block-specific individual rank for in-sample reconstruction.
+
+- Native missing-data fits now warn with class
+  `rajiveplus_saturated_signal_rank` when any `initial_signal_ranks` entry is
+  at or above that block's maximum matrix rank. Such settings can nearly
+  interpolate observed entries and make residual variance look artificially
+  close to zero.
+
+- `rajive_missing_control()` gains `rank_repeats`, `svd_shrinkage`, and
+  `svd_shrinkage_coeff`.
+  Native automatic rank diagnostics now average held-out prediction error over
+  repeated holdout splits by default. `svd_shrinkage` supports fixed
+  soft-thresholding or `svd_shrinkage = "missmda"`, which shrinks retained
+  singular values using a discarded-singular-value noise estimate inspired by
+  missMDA's regularized imputation algorithms.
+
+- Native missing-data fitting now iterates the block signal SVDs, joint SVD,
+  masked joint solve, and individual SVDs in an outer EM loop. Completed blocks
+  are re-centered and re-scaled each iteration; missing cells are updated from
+  the full reconstruction while observed cells remain fixed. The weighted
+  missing-data SVD path now uses robust completed-matrix updates, reports
+  convergence metadata, and is controlled by new `max_iter`, `tol`, and
+  `warn_nonconvergence` options in `rajive_missing_control()`.
+
+- Seeded native missing-data fits and rank diagnostics now preserve the
+  caller's RNG state. Native diagnostics clamp residual variance proportions to
+  non-negative values, all-block-missing samples are dropped with a classed
+  warning instead of aborting the whole fit, and masked joint least-squares
+  solves now fall back defensively on singular systems.
+
 ## Statistical changes
 
 - `get_random_direction_bound_robustH()` now uses classical `base::svd()`
@@ -46,6 +100,29 @@
 
 ## New features
 
+- Added native incomplete-data RaJIVE support behind
+  `Rajive(..., missing = "native")`. The complete-data default remains
+  `missing = "error"`. Native mode accepts an observed-entry `mask`, excludes
+  missing cells from preprocessing and fitted objectives, stores
+  `rajive_incomplete` metadata, and exposes `get_missingness_info()`,
+  `get_estimability()`, `get_reconstructed_blocks()`,
+  `get_missing_diagnostics()`, `plot_missingness()`,
+  `diagnose_missing_ranks()`, and `get_missing_uncertainty()`.
+  Reconstructions are explicitly derived outputs: observed values are never
+  overwritten in the fit, and block-specific individual signal for an entirely
+  missing sample-block row is labelled `not_identifiable`. Bootstrap
+  uncertainty is a parametric residual bootstrap on observed entries;
+  sensitivity reporting records requested assumptions but is not yet a full
+  sensitivity analysis; and `diagnose_missing_ranks()` reports observed-entry
+  prediction error and support diagnostics rather than null-model surrogates.
+
+- Native missing-data fits now treat `joint_rank = NA` as automatic native
+  rank selection, equivalent to `joint_rank = "native_cv"`. When no explicit
+  `rank_candidates` are supplied, candidates default to
+  `0:min(initial_signal_ranks)`, including the no-joint-signal rank. Fixed
+  numeric `joint_rank` values remain fixed-rank fits and do not run automatic
+  diagnostics.
+
 - Added bootstrap inference helpers for the v0.2.0 roadmap:
   `rajive_ci()` computes percentile/basic/BCa intervals for joint loadings,
   variance explained, and joint rank, while rejecting BCa for sample-specific
@@ -57,7 +134,7 @@
 - Added `joint_variance_partition()` for feature-level joint/individual/
   residual sum-of-squares decomposition.  The function requires the original
   `blocks` and computes residuals explicitly as `X - J - I` instead of
-  trusting the optional noise slot.
+  trusting the optional residual slot.
 
 - `assess_stability()` can now attach bootstrap replicate arrays via
   `return_replicates = TRUE`, and accepts cluster/strata resampling arguments.
@@ -150,6 +227,12 @@
   all ~38 exported functions with simulated examples, plots, and
   interpretation notes.
 
+- Added `vignettes/native_missing_union.Rmd`: a portable synthetic
+  BMV-like example showing union-sample alignment across partially
+  overlapping blocks, native missing-data fitting with `full = FALSE`,
+  missingness diagnostics, estimability labels, and reconstructed block
+  provenance.
+
 - Added `vignettes/microbiome_application.Rmd`: end-to-end RaJIVE workflow
   on a multi-kingdom gut microbiome dataset (Haak et al. 2021; bacteria,
   fungi, viruses). Demonstrates rank selection, variance decomposition,
@@ -162,9 +245,30 @@
   to `inst/benchmarks/benchmarking_heavy.Rmd`.  It remains SLURM-only and
   writes/reads caches explicitly under repo `vignettes/data`.
 
+- Added local artifact `inst/analyses/bmv_native_missing_union.Rmd` plus
+  `logs/slurm_render_bmv_native_missing.sh` to render the BMV union-sample
+  native missing-data analysis outside package checks. The artifact restores
+  `NA` support from the BMV preprocessing cache and keeps full BMV fitting
+  behind `RUN_FULL_BMV_NATIVE=1`.
+
 - Added audit regression tests for variance fortification, association method
   validation, stability method validation, zero-rank robust SVD, and
   pkgdown/vignette metadata.
+
+- Audited `R/missing_data.R` against the current source and against missMDA's
+  regularized EM (`imputeMFA` / `MIMCA`); see
+  `audits/2026-05-15-missing-data-audit.md`. Added edge-case test files
+  `tests/testthat/test-missing-native-edge.R`,
+  `test-missing-native-edge-rank.R`, and `test-missing-native-shrinkage.R`
+  (shared fixture `helper-missing-union.R`). Six assertions are intentionally
+  *expected-red* — they encode confirmed findings (global RNG mutation in the
+  native fit and in `diagnose_missing_ranks()`; unclamped negative residual
+  variance in `.masked_variance_explained`; silent missMDA-shrinkage no-op when
+  the spectrum has no noise tail; missing convergence status from the weighted
+  EM loop; a fatal abort on union samples observed in no block where a
+  warn-and-drop would do) and turn green when the corresponding fix lands.
+  Added `inst/benchmarks/benchmarking_missing_heavy.Rmd`, a SLURM-gated
+  benchmark of the native missing-data path.
 
 - `data_heatmap()` is now exported. The internal `geom_raster()` mapping now
   uses `scale_y_discrete()` / `scale_x_discrete()` (previously

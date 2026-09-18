@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=rajive_vignettes
 #SBATCH --partition=all
-#SBATCH --array=1-6
+#SBATCH --array=1-7
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
 #SBATCH --mem=128G
@@ -34,6 +34,7 @@ VIGNETTES=(
   "vignettes/inference.Rmd"
   "vignettes/jackstraw_scaling.Rmd"
   "vignettes/microbiome_application.Rmd"
+  "vignettes/native_missing_union.Rmd"
 )
 
 IDX=$((SLURM_ARRAY_TASK_ID - 1))

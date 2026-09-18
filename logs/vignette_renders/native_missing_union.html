@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Native Missing-Data Analysis on Union Samples</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Native Missing-Data Analysis on Union
+Samples</h1>
+
+
+
+<p>This vignette shows the native missing-data workflow for partially
+overlapping multi-block studies. The important step is to align each
+block to the union of sample IDs and keep absent block/sample rows as
+missing values, rather than dropping samples that are not observed in
+every block.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(rajiveplus)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">4201</span>)</span></code></pre></div>
+<div id="simulate-overlapping-bmv-like-blocks" class="section level2">
+<h2>Simulate overlapping BMV-like blocks</h2>
+<p>The blocks share a latent sample trend but cover different subsets of
+samples, similar to a study where not every assay was measured for every
+participant.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>all_samples <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;sample_%02d&quot;</span>, <span class="fu">seq_len</span>(<span class="dv">50</span>))</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>joint_scores <span class="ot">&lt;-</span> <span class="fu">scale</span>(<span class="fu">cbind</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="at">length.out =</span> <span class="fu">length</span>(all_samples)) <span class="sc">+</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="fu">length</span>(all_samples), <span class="at">sd =</span> <span class="fl">0.15</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="fu">sin</span>(<span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">2</span> <span class="sc">*</span> pi, <span class="at">length.out =</span> <span class="fu">length</span>(all_samples))) <span class="sc">+</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="fu">length</span>(all_samples), <span class="at">sd =</span> <span class="fl">0.15</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>))</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>make_block <span class="ot">&lt;-</span> <span class="cf">function</span>(sample_idx, n_features, prefix, <span class="at">noise =</span> <span class="fl">0.45</span>) {</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  joint_loadings <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.8</span>),</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>    <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.6</span>)</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  )</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  individual_score <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">scale</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(sample_idx))))</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  individual_loadings <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n_features, <span class="at">sd =</span> <span class="fl">0.35</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  x <span class="ot">&lt;-</span> joint_scores[sample_idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>] <span class="sc">%*%</span> <span class="fu">t</span>(joint_loadings) <span class="sc">+</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>    <span class="fu">outer</span>(individual_score, individual_loadings) <span class="sc">+</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>    <span class="fu">matrix</span>(<span class="fu">rnorm</span>(<span class="fu">length</span>(sample_idx) <span class="sc">*</span> n_features, <span class="at">sd =</span> noise),</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>           <span class="at">nrow =</span> <span class="fu">length</span>(sample_idx))</span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="fu">rownames</span>(x) <span class="ot">&lt;-</span> all_samples[sample_idx]</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="fu">colnames</span>(x) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(prefix, <span class="st">&quot;_&quot;</span>, <span class="fu">seq_len</span>(n_features))</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  x</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>}</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>raw_blocks <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="at">celltype =</span> <span class="fu">make_block</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">42</span>, <span class="dv">96</span>, <span class="st">&quot;cell&quot;</span>),</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  <span class="at">cytokine_6h =</span> <span class="fu">make_block</span>(<span class="dv">10</span><span class="sc">:</span><span class="dv">50</span>, <span class="dv">104</span>, <span class="st">&quot;cy6&quot;</span>),</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>  <span class="at">enzyme_24h =</span> <span class="fu">make_block</span>(<span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">25</span>, <span class="dv">31</span><span class="sc">:</span><span class="dv">50</span>), <span class="dv">88</span>, <span class="st">&quot;enz&quot;</span>)</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>)</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>raw_blocks<span class="sc">$</span>cytokine_6h[<span class="dv">2</span>, <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">5</span>, <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a>raw_blocks<span class="sc">$</span>enzyme_24h[<span class="dv">6</span>, ] <span class="ot">&lt;-</span> <span class="cn">NA_real_</span></span></code></pre></div>
+</div>
+<div id="align-to-the-sample-union" class="section level2">
+<h2>Align to the sample union</h2>
+<p>The alignment function below mirrors the preprocessing idea used by
+the BMV workflow notebook: build the analysis samples by union, allocate
+one matrix per block on that union, and only fill entries that were
+actually observed.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>align_blocks_to_union <span class="ot">&lt;-</span> <span class="cf">function</span>(blocks) {</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  analysis_samples <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(union, <span class="fu">lapply</span>(blocks, rownames))</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  aligned <span class="ot">&lt;-</span> <span class="fu">lapply</span>(blocks, <span class="cf">function</span>(x) {</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    out <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA_real_</span>, <span class="at">nrow =</span> <span class="fu">length</span>(analysis_samples), <span class="at">ncol =</span> <span class="fu">ncol</span>(x),</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>                  <span class="at">dimnames =</span> <span class="fu">list</span>(analysis_samples, <span class="fu">colnames</span>(x)))</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">match</span>(<span class="fu">rownames</span>(x), analysis_samples)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>    out[idx, ] <span class="ot">&lt;-</span> x</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>    out</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  })</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">samples =</span> analysis_samples, <span class="at">blocks =</span> aligned)</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>}</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>aligned <span class="ot">&lt;-</span> <span class="fu">align_blocks_to_union</span>(raw_blocks)</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>blocks_union <span class="ot">&lt;-</span> aligned<span class="sc">$</span>blocks</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>mask <span class="ot">&lt;-</span> <span class="fu">lapply</span>(blocks_union, is.finite)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>complete_case <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(<span class="st">`</span><span class="at">&amp;</span><span class="st">`</span>, <span class="fu">lapply</span>(mask, <span class="cf">function</span>(m) <span class="fu">rowSums</span>(m) <span class="sc">==</span> <span class="fu">ncol</span>(m)))</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>sample_accounting <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>  <span class="at">union_samples =</span> <span class="fu">length</span>(aligned<span class="sc">$</span>samples),</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a>  <span class="at">complete_case_samples =</span> <span class="fu">sum</span>(complete_case),</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>  <span class="at">samples_retained_by_union =</span> <span class="fu">length</span>(aligned<span class="sc">$</span>samples) <span class="sc">-</span> <span class="fu">sum</span>(complete_case)</span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a>)</span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(sample_accounting)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">union_samples</th>
+<th align="right">complete_case_samples</th>
+<th align="right">samples_retained_by_union</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">50</td>
+<td align="right">27</td>
+<td align="right">23</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="fit-native-missing-data-rajive" class="section level2">
+<h2>Fit native missing-data RaJIVE</h2>
+<p>Native mode excludes missing cells from preprocessing, rank
+diagnostics, and the observed-entry objective. Here
+<code>joint_rank = NA</code> triggers native candidate-rank diagnostics.
+Because <code>rank_candidates</code> is not set, the default candidate
+set is <code>0:min(initial_signal_ranks)</code>. The weighted low-rank
+completion steps use a missMDA-style singular-value shrinkage term to
+keep high initial signal ranks from overfitting observed entries.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>fit_union <span class="ot">&lt;-</span> <span class="fu">Rajive</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  blocks_union,</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">initial_signal_ranks =</span> <span class="fu">c</span>(<span class="dv">7</span><span class="dt">L</span>, <span class="dv">6</span><span class="dt">L</span>, <span class="dv">8</span><span class="dt">L</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">missing =</span> <span class="st">&quot;native&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">mask =</span> mask,</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">joint_rank =</span> <span class="cn">NA</span>,</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">full =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="at">n_perm_samples =</span> <span class="dv">1000</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="at">identifiability_norm =</span> <span class="st">&quot;l2&quot;</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="at">num_cores =</span> <span class="dv">10</span><span class="dt">L</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="at">missing_control =</span> <span class="fu">rajive_missing_control</span>(</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>    <span class="at">center =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>    <span class="at">scale =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>    <span class="at">normalize =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>    <span class="at">rank_repeats =</span> <span class="dv">5</span><span class="dt">L</span>,</span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>    <span class="at">svd_shrinkage =</span> <span class="st">&quot;missmda&quot;</span>,</span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>    <span class="at">svd_shrinkage_coeff =</span> <span class="dv">1</span>,</span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>    <span class="at">n_refits =</span> <span class="dv">10</span><span class="dt">L</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  ),</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  <span class="at">seed =</span> <span class="dv">4202</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>)</span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>  <span class="at">selected_joint_rank =</span> <span class="fu">get_joint_rank</span>(fit_union),</span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>  <span class="at">candidate_ranks =</span> <span class="fu">paste</span>(fit_union<span class="sc">$</span>missing<span class="sc">$</span>rank_diagnostics<span class="sc">$</span>joint_rank,</span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>                          <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)</span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>)</span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;   selected_joint_rank     candidate_ranks</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt; 1                   2 0, 1, 2, 3, 4, 5, 6</span></span></code></pre></div>
+</div>
+<div id="inspect-support-and-reconstruction-provenance" class="section level2">
+<h2>Inspect support and reconstruction provenance</h2>
+<p>The decomposition should be interpreted together with the observed
+support. The estimability table records whether a reconstructed quantity
+is observed, within-block estimable, cross-block joint estimable, weakly
+estimable, or not identifiable.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>info <span class="ot">&lt;-</span> <span class="fu">get_missingness_info</span>(fit_union)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>diag <span class="ot">&lt;-</span> <span class="fu">get_missing_diagnostics</span>(fit_union)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(info<span class="sc">$</span>block_summary)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="10%" />
+<col width="4%" />
+<col width="4%" />
+<col width="13%" />
+<col width="12%" />
+<col width="15%" />
+<col width="21%" />
+<col width="18%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">block</th>
+<th align="right">nrow</th>
+<th align="right">ncol</th>
+<th align="right">observed_cells</th>
+<th align="right">missing_cells</th>
+<th align="right">observed_fraction</th>
+<th align="right">whole_sample_block_rows</th>
+<th align="right">all_missing_features</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">celltype</td>
+<td align="right">50</td>
+<td align="right">96</td>
+<td align="right">4032</td>
+<td align="right">768</td>
+<td align="right">0.8400000</td>
+<td align="right">8</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">cytokine_6h</td>
+<td align="right">50</td>
+<td align="right">104</td>
+<td align="right">4263</td>
+<td align="right">937</td>
+<td align="right">0.8198077</td>
+<td align="right">9</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">enzyme_24h</td>
+<td align="right">50</td>
+<td align="right">88</td>
+<td align="right">3871</td>
+<td align="right">529</td>
+<td align="right">0.8797727</td>
+<td align="right">6</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(diag<span class="sc">$</span>variance_explained)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="16%" />
+<col width="13%" />
+<col width="13%" />
+<col width="13%" />
+<col width="25%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">block</th>
+<th align="right">Joint</th>
+<th align="right">Indiv</th>
+<th align="right">Resid</th>
+<th align="right">observed_fraction</th>
+<th align="right">observed_ss</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">celltype</td>
+<td align="right">0.5459068</td>
+<td align="right">0.2013072</td>
+<td align="right">0.2527860</td>
+<td align="right">0.8400000</td>
+<td align="right">0.8766634</td>
+</tr>
+<tr class="even">
+<td align="left">cytokine_6h</td>
+<td align="right">0.5290119</td>
+<td align="right">0.1881276</td>
+<td align="right">0.2828605</td>
+<td align="right">0.8198077</td>
+<td align="right">0.8365474</td>
+</tr>
+<tr class="odd">
+<td align="left">enzyme_24h</td>
+<td align="right">0.5541179</td>
+<td align="right">0.2284320</td>
+<td align="right">0.2174500</td>
+<td align="right">0.8797727</td>
+<td align="right">0.9852873</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>missing_labels <span class="ot">&lt;-</span> <span class="fu">get_estimability</span>(fit_union)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>missing_labels <span class="ot">&lt;-</span> missing_labels[<span class="sc">!</span>missing_labels<span class="sc">$</span>observed, ]</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(utils<span class="sc">::</span><span class="fu">head</span>(missing_labels, <span class="dv">12</span>))</span></code></pre></div>
+<table>
+<colgroup>
+<col width="3%" />
+<col width="10%" />
+<col width="4%" />
+<col width="4%" />
+<col width="11%" />
+<col width="12%" />
+<col width="11%" />
+<col width="10%" />
+<col width="31%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">block</th>
+<th align="right">row</th>
+<th align="right">col</th>
+<th align="left">sample_id</th>
+<th align="left">feature_id</th>
+<th align="left">component</th>
+<th align="left">observed</th>
+<th align="left">label</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">43</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
+<td align="right">1</td>
+<td align="left">sample_43</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">44</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">1</td>
+<td align="left">sample_44</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">45</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">1</td>
+<td align="left">sample_45</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">46</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">1</td>
+<td align="left">sample_46</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">47</td>
+<td align="left">celltype</td>
+<td align="right">47</td>
+<td align="right">1</td>
+<td align="left">sample_47</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">48</td>
+<td align="left">celltype</td>
+<td align="right">48</td>
+<td align="right">1</td>
+<td align="left">sample_48</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">49</td>
+<td align="left">celltype</td>
+<td align="right">49</td>
+<td align="right">1</td>
+<td align="left">sample_49</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">50</td>
+<td align="left">celltype</td>
+<td align="right">50</td>
+<td align="right">1</td>
+<td align="left">sample_50</td>
+<td align="left">cell_1</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">93</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
+<td align="right">2</td>
+<td align="left">sample_43</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">94</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">2</td>
+<td align="left">sample_44</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">95</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">2</td>
+<td align="left">sample_45</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">96</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">2</td>
+<td align="left">sample_46</td>
+<td align="left">cell_2</td>
+<td align="left">joint</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>recon <span class="ot">&lt;-</span> <span class="fu">get_reconstructed_blocks</span>(fit_union, <span class="at">type =</span> <span class="st">&quot;joint_individual&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                                  <span class="at">observed =</span> <span class="st">&quot;observed&quot;</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>provenance <span class="ot">&lt;-</span> <span class="fu">attr</span>(recon, <span class="st">&quot;reconstruction_provenance&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(utils<span class="sc">::</span><span class="fu">head</span>(provenance[<span class="sc">!</span>provenance<span class="sc">$</span>observed, ], <span class="dv">12</span>))</span></code></pre></div>
+<table>
+<colgroup>
+<col width="3%" />
+<col width="9%" />
+<col width="4%" />
+<col width="4%" />
+<col width="10%" />
+<col width="11%" />
+<col width="17%" />
+<col width="9%" />
+<col width="29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">block</th>
+<th align="right">row</th>
+<th align="right">col</th>
+<th align="left">sample_id</th>
+<th align="left">feature_id</th>
+<th align="left">component</th>
+<th align="left">observed</th>
+<th align="left">label</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">43</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
+<td align="right">1</td>
+<td align="left">sample_43</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">44</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">1</td>
+<td align="left">sample_44</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">45</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">1</td>
+<td align="left">sample_45</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">46</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">1</td>
+<td align="left">sample_46</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">47</td>
+<td align="left">celltype</td>
+<td align="right">47</td>
+<td align="right">1</td>
+<td align="left">sample_47</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">48</td>
+<td align="left">celltype</td>
+<td align="right">48</td>
+<td align="right">1</td>
+<td align="left">sample_48</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">49</td>
+<td align="left">celltype</td>
+<td align="right">49</td>
+<td align="right">1</td>
+<td align="left">sample_49</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">50</td>
+<td align="left">celltype</td>
+<td align="right">50</td>
+<td align="right">1</td>
+<td align="left">sample_50</td>
+<td align="left">cell_1</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">93</td>
+<td align="left">celltype</td>
+<td align="right">43</td>
+<td align="right">2</td>
+<td align="left">sample_43</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">94</td>
+<td align="left">celltype</td>
+<td align="right">44</td>
+<td align="right">2</td>
+<td align="left">sample_44</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="odd">
+<td align="left">95</td>
+<td align="left">celltype</td>
+<td align="right">45</td>
+<td align="right">2</td>
+<td align="left">sample_45</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+<tr class="even">
+<td align="left">96</td>
+<td align="left">celltype</td>
+<td align="right">46</td>
+<td align="right">2</td>
+<td align="left">sample_46</td>
+<td align="left">cell_2</td>
+<td align="left">joint_individual</td>
+<td align="left">FALSE</td>
+<td align="left">cross_block_joint_estimable</td>
+</tr>
+</tbody>
+</table>
+<p>The reconstructed matrices have the union sample set as their row
+names. Observed entries can be restored exactly with
+<code>observed = &quot;observed&quot;</code>, while missing entries remain
+explicitly labelled by the provenance table.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">vapply</span>(recon, nrow, <span class="fu">integer</span>(<span class="dv">1</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt;    celltype cytokine_6h  enzyme_24h </span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;          50          50          50</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -101,6 +101,7 @@ List RobRSVD1_cpp(
              arma::diagmat(arma::ones<arma::vec>(m) * sum_vold2));
 
         arma::mat uterm1 = arma::diagmat(cs_u) + uterm1_second;
+        uterm1.diag() += std::sqrt(std::numeric_limits<double>::epsilon());
 
         // R: uterm2 = (Wmat * data) %*% vold    (* is element-wise in R)
         arma::vec uterm2 = (Wmat % data) * vold;
@@ -126,6 +127,7 @@ List RobRSVD1_cpp(
              arma::diagmat(arma::ones<arma::vec>(n) * sum_unew2));
 
         arma::mat vterm1 = arma::diagmat(cs_v) + vterm1_second;
+        vterm1.diag() += std::sqrt(std::numeric_limits<double>::epsilon());
 
         // R: vterm2 = t(Wmat * data) %*% unew
         arma::vec vterm2 = (Wmat % data).t() * unew;

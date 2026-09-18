@@ -24,7 +24,7 @@ algorithm for multi-source / multi-omics data integration.
 
 - **Decomposes** a list of data matrices (matched samples, possibly
   different feature spaces) into shared **joint**, block-specific
-  **individual**, and residual **noise** components.
+  **individual**, and **residual** components.
 - **Robust** to a moderate fraction of element-wise outliers via an
   M-estimator (Huber loss) in the SVD step.
 - **Fast**: the per-block robust SVD is implemented in C++ via
@@ -129,12 +129,12 @@ get_block_loadings(ajive.results.robust, k = 2, type = "individual")
 ```
 
 
-- Full reconstructed matrices (J, I, or E) for a block:
+- Full reconstructed matrices (joint, individual, or residual) for a block:
 
 ```{r}
 J1 <- get_block_matrix(ajive.results.robust, k = 1, type = "joint")
 I2 <- get_block_matrix(ajive.results.robust, k = 2, type = "individual")
-E3 <- get_block_matrix(ajive.results.robust, k = 3, type = "noise")
+R3 <- get_block_matrix(ajive.results.robust, k = 3, type = "residual")
 ```
 
 
@@ -345,7 +345,7 @@ knitr::include_graphics("man/figures/README-jackstraw-loadings-significance.png"
 
 | Function | Description |
 |---|---|
-| `decomposition_heatmaps_robustH()` | Heatmaps of the raw data and the joint, individual, and noise components for all blocks. |
+| `decomposition_heatmaps_robustH()` | Heatmaps of the raw data and the joint, individual, and residual components for all blocks. |
 | `plot_scores()` | Scatter plot of two score components for a given block (joint or individual), with optional group colouring. |
 | `plot_components()` | Unified plotting entry point for score pairs/densities, top features, component heatmaps, variance, associations, jackstraw summaries, stability, and rank diagnostics. |
 | `plot_stability_heatmap()` | Compatibility wrapper for stability plots. |

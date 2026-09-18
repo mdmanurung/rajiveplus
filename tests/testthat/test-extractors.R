@@ -35,6 +35,19 @@ test_that(".extract_block_matrices computes residual from data minus components"
   expect_equal(lapply(resid, unname), lapply(fx$residual, unname))
 })
 
+test_that("get_block_matrix uses residual component vocabulary", {
+  fx <- make_extractor_fixture()
+
+  expect_equal(
+    get_block_matrix(fx$fit, k = 1, type = "residual"),
+    fx$residual[[1L]]
+  )
+  expect_error(
+    get_block_matrix(fx$fit, k = 1, type = "noise"),
+    regexp = 'type = "residual"'
+  )
+})
+
 test_that(".extract_block_matrices rejects stale component dimensions", {
   fx <- make_extractor_fixture()
   fx$fit$block_decomps[[2L]]$full <- fx$fit$block_decomps[[2L]]$full[, -1L, drop = FALSE]

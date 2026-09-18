@@ -42,6 +42,7 @@ output, then say what scientific question the output can answer.
 |---|---|
 | Simulation | `ajive.data.sim` |
 | Core decomposition | `Rajive` |
+| Native missing data | `rajive_missing_control`, `get_missingness_info`, `get_estimability`, `get_reconstructed_blocks`, `get_missing_diagnostics`, `diagnose_missing_ranks`, `get_missing_uncertainty`, `plot_missingness` |
 | S3 — *rajive* class | `print`, `summary` |
 | Rank accessors | `get_joint_rank`, `get_individual_rank`, `get_all_ranks` |
 | Component extractors | `get_joint_scores`, `get_block_scores`, `get_block_loadings`, `get_block_matrix` |
@@ -203,6 +204,48 @@ fit_demo <- Rajive(
 `joint_rank = NA` when the rank should be estimated. Choose
 `initial_signal_ranks` conservatively above the expected signal rank in each
 block, because this is the search space from which joint structure is found.
+
+---
+
+## `Rajive()` — native missing-data mode
+
+Native missing-data mode excludes masked cells from observed-entry estimation
+and keeps reconstruction separate from the fitted decomposition. The example
+below removes a scattered cell and one complete sample-block row, fixes the
+joint rank, and inspects the resulting provenance labels.
+
+```{r}
+missing_blocks <- blocks[1:2]
+missing_mask <- lapply(missing_blocks, function(x) matrix(TRUE, nrow(x), ncol(x)))
+missing_mask[[1]][2, 3] <- FALSE
+missing_mask[[2]][5, ] <- FALSE
+
+fit_missing <- Rajive(
+  missing_blocks,
+  initial_signal_ranks = c(3L, 3L),
+  missing = "native",
+  mask = missing_mask,
+  joint_rank = 1L,
+  missing_control = rajive_missing_control(center = TRUE, scale = TRUE,
+                                           normalize = TRUE)
+)
+
+get_missingness_info(fit_missing)$counts
+head(get_estimability(fit_missing, block = 2,
+                      component = "individual"))
+```
+
+```{r}
+recon <- get_reconstructed_blocks(fit_missing, type = "joint_individual",
+                                  observed = "observed")
+dim(recon[[1]])
+get_missing_diagnostics(fit_missing)$variance_explained
+```
+
+**What to look for.** Observed entries remain available as measured values
+when requested. Entirely missing sample-block rows can receive joint-only
+reconstructions from cross-block structure, but their block-specific
+individual signal is labelled `not_identifiable`.
 
 ---
 
@@ -405,12 +448,12 @@ the raw loading rank alone.
 ```{r}
 J1 <- get_block_matrix(fit, k = 1, type = "joint")
 I1 <- get_block_matrix(fit, k = 1, type = "individual")
-E1 <- get_block_matrix(fit, k = 1, type = "noise")
-cat("Reconstruction error:", round(max(abs(blocks[[1]] - J1 - I1 - E1)), 6), "\n")
+R1 <- get_block_matrix(fit, k = 1, type = "residual")
+cat("Reconstruction error:", round(max(abs(blocks[[1]] - J1 - I1 - R1)), 6), "\n")
 ```
 
 
-**What to look for.** The joint, individual, and noise matrices reconstruct the
+**What to look for.** The joint, individual, and residual matrices reconstruct the
 original block. The split lets you ask whether a pattern is shared across
 blocks or belongs mainly to one block.
 
@@ -511,8 +554,8 @@ if (requireNamespace("cowplot", quietly = TRUE) &&
 
 
 **What to look for.** The four panels separate original, joint, individual, and
-noise signal. Shared structure should appear in the joint panels across blocks;
-the noise panels should be comparatively featureless.
+residual signal. Shared structure should appear in the joint panels across blocks;
+the residual panels should be comparatively featureless.
 
 ---
 
@@ -539,8 +582,8 @@ Use `joint_variance_partition()` when feature-level accounting is needed.
 ```{r}
 var_list <- showVarExplained_robust(fit, blocks)
 cat("Joint:     ", round(unlist(var_list$Joint), 3), "\n")
-cat("Individual:", round(unlist(var_list$Indiv), 3), "\n")
-cat("Residual:  ", round(unlist(var_list$Resid), 3), "\n")
+cat("Individual:", round(unlist(var_list$Individual), 3), "\n")
+cat("Residual:  ", round(unlist(var_list$Residual), 3), "\n")
 ```
 
 

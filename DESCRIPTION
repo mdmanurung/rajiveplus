@@ -10,11 +10,10 @@ Description: Implements Robust Angle-based Joint and Individual Variation Explai
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 3.1.0)
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     testthat (>= 2.1.0),
-    withr,
     cowplot,
     reshape2,
     dplyr,
@@ -41,7 +40,8 @@ Imports: ggplot2,
     cli,
 	stats,
 	Rcpp,
-	parallel
+	parallel,
+    withr
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://mdmanurung.github.io/rajiveplus/
 BugReports: https://github.com/mdmanurung/rajiveplus/issues

@@ -5,12 +5,36 @@
 \title{Computes the robust SVD of a matrix
 Using robRsvd}
 \usage{
-get_svd_robustH(X, rank = NULL)
+get_svd_robustH(
+  X,
+  rank = NULL,
+  weights = NULL,
+  shrinkage = 0,
+  shrinkage_coeff = 1,
+  max_iter = 100L,
+  tol = 1e-07,
+  warn_nonconvergence = FALSE
+)
 }
 \arguments{
 \item{X}{Matrix. X matrix.}
 
 \item{rank}{Integer. Rank of SVD decomposition}
+
+\item{weights}{Optional observed-entry weight/mask matrix forwarded to
+\code{\link{RobRSVD.all}}.}
+
+\item{shrinkage}{Non-negative singular-value shrinkage forwarded to
+\code{\link{RobRSVD.all}}.}
+
+\item{shrinkage_coeff}{Positive coefficient forwarded to
+\code{\link{RobRSVD.all}} when \code{shrinkage = "missmda"}.}
+
+\item{max_iter, tol}{Iteration cap and convergence tolerance forwarded to
+the weighted SVD path.}
+
+\item{warn_nonconvergence}{Logical; warn if weighted completion reaches
+\code{max_iter}.}
 }
 \value{
 List. The SVD of X.

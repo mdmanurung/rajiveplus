@@ -4,7 +4,17 @@
 \alias{RobRSVD.all}
 \title{Computes the robust SVD of a matrix}
 \usage{
-RobRSVD.all(data, nrank = min(dim(data)), svdinit = NULL)
+RobRSVD.all(
+  data,
+  nrank = min(dim(data)),
+  svdinit = NULL,
+  weights = NULL,
+  shrinkage = 0,
+  shrinkage_coeff = 1,
+  max_iter = 100L,
+  tol = 1e-07,
+  warn_nonconvergence = FALSE
+)
 }
 \arguments{
 \item{data}{Matrix. X matrix.}
@@ -13,6 +23,31 @@ RobRSVD.all(data, nrank = min(dim(data)), svdinit = NULL)
 
 \item{svdinit}{List or NULL. Optional classical SVD used for initialization.
 If NULL (default), computed lazily after input validation.}
+
+\item{weights}{Optional numeric or logical matrix with the same dimensions
+as \code{data}. Positive / \code{TRUE} entries are treated as observed;
+zero / \code{FALSE} entries are ignored by the weighted SVD path.}
+
+\item{shrinkage}{Non-negative singular-value soft-threshold applied after
+each weighted low-rank completion step, or \code{"missmda"} for a
+missMDA-inspired shrinkage using the discarded singular values to estimate
+the noise level. The default \code{0} preserves the historical
+unregularized behaviour.}
+
+\item{shrinkage_coeff}{Positive coefficient for \code{shrinkage =
+"missmda"}. Values above 1 shrink more strongly.}
+
+\item{max_iter}{Integer. Maximum number of weighted low-rank completion
+iterations used by the missing-data (weighted) SVD path. Defaults to
+\code{100}; non-positive or missing values fall back to the default.}
+
+\item{tol}{Numeric. Relative convergence tolerance for the weighted SVD
+path; iteration stops when the objective changes by less than this
+fraction. Defaults to \code{1e-7}.}
+
+\item{warn_nonconvergence}{Logical. If \code{TRUE}, emit a warning when the
+weighted SVD path reaches \code{max_iter} without converging. Defaults to
+\code{FALSE}.}
 }
 \value{
 List with entries \code{d}, \code{u}, \code{v}.  When

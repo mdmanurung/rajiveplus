@@ -25,7 +25,7 @@ test_that("showVarExplained_robust uses named 'd' singular values", {
 
   # If positional [[1]] were used here, huge 'u' entries would inflate > 1.
   expect_true(all(got$Joint <= 1 + 1e-12))
-  expect_true(all(got$Indiv <= 1 + 1e-12))
+  expect_true(all(got$Individual <= 1 + 1e-12))
 })
 
 test_that("showVarExplained_robust matches sum(d^2)/||X||_F^2", {
@@ -48,10 +48,10 @@ test_that("showVarExplained_robust matches sum(d^2)/||X||_F^2", {
   )
 
   expect_equal(got$Joint, expected_joint)
-  expect_equal(got$Indiv, expected_indiv)
+  expect_equal(got$Individual, expected_indiv)
 })
 
-test_that("showVarExplained_robust components sum to 1 per block", {
+test_that("showVarExplained_robust uses full public component labels", {
   set.seed(102)
   blocks <- list(
     matrix(rnorm(8 * 5), 8, 5),
@@ -61,7 +61,8 @@ test_that("showVarExplained_robust components sum to 1 per block", {
   fit <- list(block_decomps = make_mock_decomp(blocks))
   got <- showVarExplained_robust(fit, blocks)
 
-  expect_equal(got$Joint + got$Indiv + got$Resid,
+  expect_named(got, c("Joint", "Individual", "Residual"))
+  expect_equal(got$Joint + got$Individual + got$Residual,
                rep(1, length(blocks)),
                tolerance = 1e-10)
 })

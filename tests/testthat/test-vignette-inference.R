@@ -13,6 +13,7 @@ test_that("simulated-data inference vignette renders", {
   rendered <- rmarkdown::render(
     input = vignette_path,
     output_dir = out_dir,
+    intermediates_dir = out_dir,
     quiet = TRUE,
     envir = new.env(parent = globalenv())
   )
