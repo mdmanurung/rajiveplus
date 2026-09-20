@@ -12,6 +12,10 @@
   qvalue spline undefined, and records that fallback in result metadata.
 - Slow calibration runs each manifest-listed file in an isolated fail-closed R
   process and verifies JUnit tests plus per-replicate TSV evidence.
+- Corrected the Wedin U-side Haar calibration reference to sample the full
+  ambient orthogonal complement. The former reference used only the remaining
+  columns of a thin SVD for tall matrices and therefore omitted the left
+  nullspace.
 - Added strict Data Block, sample-alignment, rank, and degenerate-feature
   contracts with typed conditions and preserved feature mappings.
 - Added strict complete, incomplete, and rank-only result constructors,

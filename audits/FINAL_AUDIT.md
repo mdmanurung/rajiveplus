@@ -25,9 +25,11 @@ Native convergence/recovery and MCAR bootstrap coverage now pass a scoped
 dataset-level calibration, and fixed-rank jackstraw plus pooled PIP pass their
 declared 100-dataset signal/null calibration. These receipts do not establish
 MNAR validity, component-specific PIP pooling, automatic-rank inference, or
-application-level biological validity. The complete slow manifest remains red
-because the pre-existing Wedin U-space Haar comparison fails. Other residual
-risks are compatibility with the unpinned upstream source and the absence of
+application-level biological validity. The Wedin U/V Haar calibration now
+passes after correcting its reference to use the full ambient orthogonal
+complement. The complete slow manifest remains red because joint-rank
+strong-signal recovery is 0.53 against the required 0.80. Other residual risks
+are compatibility with the unpinned upstream source and the absence of
 regenerated BMV application evidence.
 
 The pre-existing `.vscode/settings.json` change remains preserved and outside

@@ -28,7 +28,11 @@ test_that("wedin_bound_resampling U-perp samples match Haar-uniform reference", 
     svd_X    <- svd(X)
     signal_r <- 5L
     signal_basis <- svd_X$u[, seq_len(signal_r), drop = FALSE]
-    perp_basis <- svd_X$u[, -(1:signal_r), drop = FALSE]
+    # For a tall matrix, the remaining columns of the thin SVD span only the
+    # complement inside col(X). The Wedin contract samples the full ambient
+    # complement of the signal basis, including the left nullspace of X.
+    full_basis <- qr.Q(qr(signal_basis), complete = TRUE)
+    perp_basis <- full_basis[, -(seq_len(signal_r)), drop = FALSE]
 
     num_samples <- 200L
 
@@ -64,7 +68,8 @@ test_that("wedin_bound_resampling V-perp samples match Haar-uniform reference", 
     svd_X    <- svd(X)
     signal_r <- 5L
     signal_basis_v <- svd_X$v[, seq_len(signal_r), drop = FALSE]
-    perp_basis_v <- svd_X$v[, -(1:signal_r), drop = FALSE]
+    full_basis_v <- qr.Q(qr(signal_basis_v), complete = TRUE)
+    perp_basis_v <- full_basis_v[, -(seq_len(signal_r)), drop = FALSE]
 
     num_samples <- 200L
 
@@ -100,7 +105,6 @@ test_that("wedin_bound_resampling returns positive norms", {
     X        <- Y$sim_data[[1]]
     svd_X    <- svd(X)
     signal_basis <- svd_X$u[, 1:4, drop = FALSE]
-    perp_basis <- svd_X$u[, -(1:4), drop = FALSE]
 
     cur <- rajiveplus:::wedin_bound_resampling(
       X             = X,
