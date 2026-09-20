@@ -28,6 +28,9 @@
 #' @param warn_nonconvergence Logical. If \code{TRUE}, emit a warning when the
 #'   weighted SVD path reaches \code{max_iter} without converging. Defaults to
 #'   \code{FALSE}.
+#' @param irls_max_iter Integer iteration cap for each inner robust rank-one
+#'   IRLS fit.
+#' @param irls_tol Numeric convergence tolerance for inner robust IRLS fits.
 #' @importFrom stats median
 #' @return List with entries \code{d}, \code{u}, \code{v}.  When
 #'   \code{nrank <= 0}, returns \code{numeric(0)} singular values and
@@ -38,6 +41,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
                         shrinkage_coeff = 1,
                         max_iter = 100L,
                         tol = 1e-7,
+                        irls_max_iter = 1000L,
+                        irls_tol = 1e-5,
                         warn_nonconvergence = FALSE)
 {
   if (!is.matrix(data)) {
@@ -92,7 +97,9 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
       }
       if (!identical(shrinkage, 0)) {
         out <- RobRSVD.all(data, nrank = nrank, svdinit = svdinit,
-                           weights = NULL)
+                           weights = NULL,
+                           irls_max_iter = irls_max_iter,
+                           irls_tol = irls_tol)
         if (is.numeric(shrinkage)) {
           out$d <- pmax(out$d - shrinkage, 0)
         } else {
@@ -108,6 +115,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
       return(.RobRSVD_all_weighted_R(data, weights, nrank = nrank,
                                      max_iter = max_iter,
                                      tol = tol,
+                                     irls_max_iter = irls_max_iter,
+                                     irls_tol = irls_tol,
                                      warn_nonconvergence = warn_nonconvergence,
                                      shrinkage = shrinkage,
                                      shrinkage_coeff = shrinkage_coeff))
@@ -122,7 +131,9 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
     nrank  = nrank,
     sinit1 = svdinit$d[1],
     uinit1 = svdinit$u[, 1, drop = TRUE],
-    vinit1 = svdinit$v[, 1, drop = TRUE]
+    vinit1 = svdinit$v[, 1, drop = TRUE],
+    niter = as.integer(irls_max_iter),
+    tol = irls_tol
   ))
   if (!identical(shrinkage, 0)) {
     if (is.numeric(shrinkage)) {
@@ -138,7 +149,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
   out
 }
 
-.robust_rank_svd_completed <- function(x, rank) {
+.robust_rank_svd_completed <- function(x, rank, irls_max_iter = 1000L,
+                                       irls_tol = 1e-5) {
   rank <- min(as.integer(rank), min(dim(x)))
   if (rank <= 0L) {
     return(list(
@@ -148,13 +160,22 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
     ))
   }
   tryCatch(
-    suppressWarnings(RobRSVD.all(x, nrank = rank, weights = NULL, shrinkage = 0)),
+    {
+      out <- suppressWarnings(RobRSVD.all(
+      x, nrank = rank, weights = NULL, shrinkage = 0,
+      irls_max_iter = irls_max_iter, irls_tol = irls_tol
+      ))
+      out$fallback_used <- FALSE
+      out
+    },
     error = function(e) {
       sv <- svd(x, nu = rank, nv = rank)
       list(
         d = sv$d[seq_len(rank)],
         u = sv$u[, seq_len(rank), drop = FALSE],
-        v = sv$v[, seq_len(rank), drop = FALSE]
+        v = sv$v[, seq_len(rank), drop = FALSE],
+        fallback_used = TRUE,
+        fallback_reason = conditionMessage(e)
       )
     }
   )
@@ -247,6 +268,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
 .RobRSVD_all_weighted_R <- function(data, weights, nrank, max_iter = 100L,
                                     tol = 1e-7, shrinkage = 0,
                                     shrinkage_coeff = 1,
+                                    irls_max_iter = 1000L,
+                                    irls_tol = 1e-5,
                                     warn_nonconvergence = FALSE) {
   r <- min(as.integer(nrank), min(dim(data)))
   if (r <= 0L || !any(weights)) {
@@ -286,8 +309,10 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
   converged <- FALSE
   iter <- 0L
   objective <- Inf
+  fallback_used <- FALSE
   for (iter in seq_len(max_iter)) {
-    sv <- .robust_rank_svd_completed(filled, r)
+    sv <- .robust_rank_svd_completed(filled, r, irls_max_iter, irls_tol)
+    fallback_used <- fallback_used || isTRUE(sv$fallback_used)
     u <- sv$u[, seq_len(r), drop = FALSE]
     spectrum <- if (identical(shrinkage, "missmda")) {
       svd(filled, nu = 0, nv = 0)$d
@@ -311,7 +336,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
     previous_objective <- objective
   }
 
-  sv <- .robust_rank_svd_completed(filled, r)
+  sv <- .robust_rank_svd_completed(filled, r, irls_max_iter, irls_tol)
+  fallback_used <- fallback_used || isTRUE(sv$fallback_used)
   u <- sv$u[, seq_len(r), drop = FALSE]
   spectrum <- if (identical(shrinkage, "missmda")) {
     svd(filled, nu = 0, nv = 0)$d
@@ -338,7 +364,8 @@ RobRSVD.all <- function(data, nrank = min(dim(data)), svdinit = NULL,
   }
 
   list(d = d, u = u, v = v, n_iter = iter, converged = converged,
-       objective = objective, method = "weighted_robust_em")
+       objective = objective, method = "weighted_robust_em",
+       fallback_used = fallback_used)
 }
 
 

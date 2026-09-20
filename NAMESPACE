@@ -32,7 +32,9 @@ export(get_block_matrix)
 export(get_block_scores)
 export(get_estimability)
 export(get_feature_contributions)
+export(get_feature_map)
 export(get_individual_rank)
+export(get_joint_coordinates)
 export(get_joint_rank)
 export(get_joint_scores)
 export(get_missing_diagnostics)
@@ -42,6 +44,7 @@ export(get_reconstructed_blocks)
 export(get_significant_vars)
 export(get_top_loadings)
 export(jackstraw_rajive)
+export(jackstraw_refit_rajive)
 export(joint_variance_partition)
 export(plot_components)
 export(plot_jackstraw)
@@ -60,12 +63,16 @@ import(ggplot2)
 importFrom(Rcpp,evalCpp)
 importFrom(doRNG,"%dorng%")
 importFrom(grDevices,rainbow)
-importFrom(stats,median)
-importFrom(stats,quantile)
-importFrom(stats,rexp)
-importFrom(stats,rnorm)
-importFrom(stats,runif)
-importFrom(utils,capture.output)
-importFrom(utils,head)
-importFrom(utils,str)
+importFrom(stats,
+  median,
+  quantile,
+  rexp,
+  rnorm,
+  runif
+)
+importFrom(utils,
+  capture.output,
+  head,
+  str
+)
 useDynLib(rajiveplus, .registration = TRUE)

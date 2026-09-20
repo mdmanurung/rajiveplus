@@ -5,11 +5,15 @@ Authors@R: c(
     person(given = "Mikhael",
            family = "Manurung",
            role = c("aut", "cre"),
-           email = "m.d.manurung@lumc.nl"))
-Description: Implements Robust Angle-based Joint and Individual Variation Explained (RAJIVE) for matched multi-view data. Provides robust singular value decomposition, joint and individual component estimation, diagnostic visualization, feature-level jackstraw testing, metadata association, and stability summaries.
+           email = "m.d.manurung@lumc.nl"),
+    person(given = "Erica",
+           family = "Ponzi",
+           role = "ctb",
+           comment = "Author of the original RaJIVE implementation"))
+Description: Implements Robust Angle-based Joint and Individual Variation Explained (RAJIVE) for matched multi-view data, extending the original RaJIVE implementation at <https://github.com/ericaponzi/RaJIVE>. Provides robust singular value decomposition, joint and individual component estimation, diagnostic visualization, feature-level jackstraw testing, metadata association, and stability summaries. Native missing-data fitting and fixed-score jackstraw inference are experimental.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.5.0)
 Suggests:
     knitr,
     rmarkdown,
@@ -30,8 +34,11 @@ Suggests:
     pheatmap,
     ggrepel,
     patchwork,
+    RaJIVE,
     remotes,
-    qvalue
+    qvalue,
+    tibble,
+    tidyr
 VignetteBuilder: knitr
 Imports: ggplot2,
 	doParallel,
@@ -45,4 +52,4 @@ Imports: ggplot2,
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://mdmanurung.github.io/rajiveplus/
 BugReports: https://github.com/mdmanurung/rajiveplus/issues
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

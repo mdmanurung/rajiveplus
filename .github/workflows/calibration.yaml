@@ -1,0 +1,40 @@
+name: calibration
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 6"
+
+permissions:
+  contents: read
+
+jobs:
+  slow-calibration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      R_SCRIPT: Rscript
+      RAJIVE_GATE_DIR: calibration-artifacts
+      OMP_NUM_THREADS: 1
+      OPENBLAS_NUM_THREADS: 1
+      MKL_NUM_THREADS: 1
+      BLIS_NUM_THREADS: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.1"
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+      - name: Run fail-closed slow calibration gate
+        run: bash scripts/run_slow_gate.sh
+      - name: Preserve calibration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-${{ github.sha }}
+          path: calibration-artifacts/
+          retention-days: 30
+          if-no-files-found: error

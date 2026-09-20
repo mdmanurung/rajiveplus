@@ -611,6 +611,12 @@
 #'   weighted SVD completion subproblems.
 #' @param tol Relative convergence tolerance for native missing-data completion
 #'   objectives.
+#' @param outer_max_iter,completion_max_iter Optional separate iteration caps
+#'   for the outer native loop and weighted low-rank completion. Each inherits
+#'   `max_iter` when omitted.
+#' @param irls_max_iter Iteration cap for inner robust IRLS fits.
+#' @param outer_tol,completion_tol,irls_tol Separate convergence tolerances.
+#'   Outer and completion tolerances inherit `tol` when omitted.
 #' @param warn_nonconvergence Logical; emit classed warnings when native
 #'   completion subproblems reach \code{max_iter}. Convergence status is always
 #'   recorded in the fit object.
@@ -632,6 +638,12 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                                    svd_shrinkage_coeff = 1,
                                    max_iter = 5L,
                                    tol = 1e-2,
+                                   outer_max_iter = NULL,
+                                   completion_max_iter = NULL,
+                                   irls_max_iter = 1000L,
+                                   outer_tol = NULL,
+                                   completion_tol = NULL,
+                                   irls_tol = 1e-5,
                                    warn_nonconvergence = FALSE,
                                    n_refits = 5L,
                                    censoring = NULL,
@@ -667,6 +679,20 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
   if (length(tol) != 1L || is.na(tol) || !is.finite(tol) || tol <= 0) {
     tol <- 1e-2
   }
+  normalize_cap <- function(value, fallback) {
+    if (is.null(value)) return(as.integer(fallback))
+    value <- as.integer(value)
+    if (length(value) != 1L || is.na(value) || value < 1L) {
+      as.integer(fallback)
+    } else value
+  }
+  normalize_tol <- function(value, fallback) {
+    if (is.null(value)) return(as.numeric(fallback))
+    value <- as.numeric(value)
+    if (length(value) != 1L || is.na(value) || !is.finite(value) || value <= 0) {
+      as.numeric(fallback)
+    } else value
+  }
   list(
     center = isTRUE(center),
     scale = isTRUE(scale),
@@ -678,6 +704,12 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     svd_shrinkage_coeff = svd_shrinkage_coeff,
     max_iter = max_iter,
     tol = tol,
+    outer_max_iter = normalize_cap(outer_max_iter, max_iter),
+    completion_max_iter = normalize_cap(completion_max_iter, max_iter),
+    irls_max_iter = normalize_cap(irls_max_iter, 1000L),
+    outer_tol = normalize_tol(outer_tol, tol),
+    completion_tol = normalize_tol(completion_tol, tol),
+    irls_tol = normalize_tol(irls_tol, 1e-5),
     warn_nonconvergence = isTRUE(warn_nonconvergence),
     n_refits = as.integer(n_refits),
     censoring = censoring,
@@ -828,6 +860,8 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                                                 svd_shrinkage_coeff = 1,
                                                 max_iter = 100L,
                                                 tol = 1e-7,
+                                                irls_max_iter = 1000L,
+                                                irls_tol = 1e-5,
                                                 full = TRUE,
                                                 block_name = NULL,
                                                 estimation_mask = mask) {
@@ -849,6 +883,8 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                              shrinkage_coeff = svd_shrinkage_coeff,
                              max_iter = max_iter,
                              tol = tol,
+                             irls_max_iter = irls_max_iter,
+                             irls_tol = irls_tol,
                              warn_nonconvergence = FALSE)
     individual_full <- svd_reconstruction(indiv_svd)
     individual_full[rowSums(mask) == 0L, ] <- 0
@@ -883,6 +919,16 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     block_names <- paste0("block", seq_along(blocks))
   }
 
+  iteration_metadata <- function(x, layer) {
+    list(
+      layer = layer,
+      n_iter = if (is.null(x$n_iter)) NA_integer_ else as.integer(x$n_iter),
+      converged = if (is.null(x$converged)) NA else isTRUE(x$converged),
+      method = if (is.null(x$method)) "robust_irls_cpp" else x$method,
+      fallback_used = isTRUE(x$fallback_used)
+    )
+  }
+
   block_svd <- lapply(seq_along(blocks), function(k) {
     weights <- if (isTRUE(use_completed_signal)) NULL else mask[[k]]
     get_svd_robustH(
@@ -891,8 +937,10 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
       weights = weights,
       shrinkage = control$svd_shrinkage,
       shrinkage_coeff = control$svd_shrinkage_coeff,
-      max_iter = control$max_iter,
-      tol = control$tol,
+      max_iter = control$completion_max_iter,
+      tol = control$completion_tol,
+      irls_max_iter = control$irls_max_iter,
+      irls_tol = control$irls_tol,
       warn_nonconvergence = control$warn_nonconvergence
     )
   })
@@ -912,8 +960,10 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
       rank = rank_for_signal,
       shrinkage = control$svd_shrinkage,
       shrinkage_coeff = control$svd_shrinkage_coeff,
-      max_iter = control$max_iter,
-      tol = control$tol,
+      max_iter = control$completion_max_iter,
+      tol = control$completion_tol,
+      irls_max_iter = control$irls_max_iter,
+      irls_tol = control$irls_tol,
       warn_nonconvergence = control$warn_nonconvergence
     )
     joint_scores <- signal_svd$u[, seq_len(rank_for_signal), drop = FALSE]
@@ -939,8 +989,10 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
       initial_signal_rank = initial_signal_ranks[[k]],
       svd_shrinkage = control$svd_shrinkage,
       svd_shrinkage_coeff = control$svd_shrinkage_coeff,
-      max_iter = control$max_iter,
-      tol = control$tol,
+      max_iter = control$completion_max_iter,
+      tol = control$completion_tol,
+      irls_max_iter = control$irls_max_iter,
+      irls_tol = control$irls_tol,
       full = full,
       block_name = block_names[[k]],
       estimation_mask = estimation_mask[[k]]
@@ -958,7 +1010,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                                                 individual_full, mask[[k]])
   }
 
-  fit <- list(
+  fit <- .new_rajive(
     block_decomps = block_decomps,
     joint_scores = joint_scores,
     joint_rank = joint_rank,
@@ -968,16 +1020,36 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
       overall_sv_sq_threshold = NA_real_,
       identifiability_norm = identifiability_norm,
       native_missing = TRUE
+    ),
+    feature_map = .identity_feature_map(blocks),
+    method_profile = .resolve_method_profile(
+      "RJP-NATIVE-BASE", identifiability_norm
     )
   )
-  class(fit) <- "rajive"
 
   list(
     fit = fit,
     block_objective = objectives,
     objective = sum(objectives),
     variance = variance,
-    fitted_blocks = fitted_blocks
+    fitted_blocks = fitted_blocks,
+    layer_convergence = list(
+      block_signal = lapply(block_svd, iteration_metadata,
+                            layer = "block_signal"),
+      joint_signal = if (rank_for_signal == 0L) {
+        list(layer = "joint_signal", n_iter = 0L, converged = TRUE,
+             method = "rank_zero", fallback_used = FALSE)
+      } else iteration_metadata(signal_svd, "joint_signal"),
+      individual_completion = lapply(seq_along(blocks), function(k) {
+        iteration_metadata(block_decomps[[3L * (k - 1L) + 1L]],
+                           "individual_completion")
+      }),
+      robust_irls = list(
+        configured_max_iter = control$irls_max_iter,
+        configured_tol = control$irls_tol,
+        per_component_convergence_available = FALSE
+      )
+    )
   )
 }
 
@@ -985,7 +1057,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
                                             convergence,
                                             preprocess = NULL,
                                             initial_signal_ranks = NULL) {
-  fit$missing <- list(
+  missing <- list(
     mask = normalized$mask,
     observed = normalized$observed,
     patterns = normalized$patterns,
@@ -996,12 +1068,12 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     control = control,
     convergence = convergence
   )
-  class(fit) <- unique(c("rajive_incomplete", class(fit)))
+  fit$missing <- missing
   fit$missing$estimability <- .compute_estimability(
     fit, normalized$mask, normalized$patterns
   )
   fit$missing$reconstruction_provenance <- fit$missing$estimability
-  fit
+  .new_rajive_incomplete(fit, fit$missing)
 }
 
 .Rajive_incomplete <- function(blocks, initial_signal_ranks, joint_rank,
@@ -1142,8 +1214,8 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
   }
 
   completed_blocks <- .initialize_completed_blocks(normalized$blocks, mask)
-  max_iter <- max(1L, as.integer(control$max_iter))
-  tol <- as.numeric(control$tol)
+  max_iter <- max(1L, as.integer(control$outer_max_iter))
+  tol <- as.numeric(control$outer_tol)
   previous_objective <- Inf
   converged <- FALSE
   history <- data.frame(iteration = integer(0), objective = numeric(0),
@@ -1224,6 +1296,7 @@ rajive_missing_control <- function(center = FALSE, scale = FALSE,
     outer_em = TRUE,
     preprocessing = "completed_recentered",
     history = history
+    , layers = final_state$layer_convergence
   )
   fit <- .attach_native_missing_metadata(final_state$fit, normalized, control,
                                          convergence, final_preprocess,
@@ -1700,18 +1773,22 @@ summary.rajive_incomplete <- function(object, ...) {
 
   for (fold in folds) {
     fold_masks <- .rank_holdout_masks(mask, fold)
-    fit <- .Rajive_incomplete(
-      blocks = blocks,
-      initial_signal_ranks = initial_signal_ranks,
-      joint_rank = rank,
-      mask = fold_masks$training,
-      missing_control = control,
-      full = full,
-      num_cores = num_cores,
-      seed = NA_integer_,
-      identifiability_norm = identifiability_norm,
-      .warn_signal_rank = FALSE
+    fit <- tryCatch(
+      .Rajive_incomplete(
+        blocks = blocks,
+        initial_signal_ranks = initial_signal_ranks,
+        joint_rank = rank,
+        mask = fold_masks$training,
+        missing_control = control,
+        full = full,
+        num_cores = num_cores,
+        seed = NA_integer_,
+        identifiability_norm = identifiability_norm,
+        .warn_signal_rank = FALSE
+      ),
+      error = function(error) NULL
     )
+    if (is.null(fit)) next
     transformed <- .apply_observed_preprocess(blocks, fit$missing$preprocess)
 
     for (k in seq_along(blocks)) {

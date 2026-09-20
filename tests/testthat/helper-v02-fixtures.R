@@ -4,7 +4,8 @@ make_component_decomp <- function(mat, keep_full = TRUE) {
   out <- list(
     u = sv$u[, seq_len(r), drop = FALSE],
     d = sv$d,
-    v = sv$v[, seq_len(r), drop = FALSE]
+    v = sv$v[, seq_len(r), drop = FALSE],
+    rank = r
   )
   if (keep_full) out$full <- mat
   out

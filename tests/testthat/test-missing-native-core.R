@@ -106,6 +106,32 @@ test_that("native missing control exposes completion iteration settings", {
   expect_true(ctrl$warn_nonconvergence)
 })
 
+test_that("native missing controls separate outer completion and IRLS layers", {
+  ctrl <- rajive_missing_control(
+    max_iter = 9L, tol = 0.2,
+    outer_max_iter = 2L, completion_max_iter = 3L,
+    irls_max_iter = 17L,
+    outer_tol = 0.1, completion_tol = 0.01, irls_tol = 1e-4
+  )
+  expect_identical(ctrl$outer_max_iter, 2L)
+  expect_identical(ctrl$completion_max_iter, 3L)
+  expect_identical(ctrl$irls_max_iter, 17L)
+  expect_equal(c(ctrl$outer_tol, ctrl$completion_tol, ctrl$irls_tol),
+               c(0.1, 0.01, 1e-4))
+
+  set.seed(8210L)
+  blocks <- list(matrix(rnorm(48), 8), matrix(rnorm(40), 8))
+  mask <- lapply(blocks, function(x) matrix(TRUE, nrow(x), ncol(x)))
+  mask[[1L]][1L, 1L] <- FALSE
+  fit <- rajiveplus:::.Rajive_incomplete(
+    blocks, c(2L, 2L), joint_rank = 1L, mask = mask,
+    missing_control = ctrl
+  )
+  expect_lte(fit$missing$convergence$n_iter, 2L)
+  expect_identical(fit$missing$convergence$layers$robust_irls$configured_max_iter,
+                   17L)
+})
+
 test_that("native missing fits support full false with missing cells", {
   set.seed(8205)
   blocks <- list(

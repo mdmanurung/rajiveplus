@@ -14,6 +14,7 @@
 #'   the weighted SVD path.
 #' @param warn_nonconvergence Logical; warn if weighted completion reaches
 #'   \code{max_iter}.
+#' @param irls_max_iter,irls_tol Inner robust IRLS iteration cap and tolerance.
 #'
 #' @return List. The SVD of X.
 
@@ -21,12 +22,16 @@
 
 get_svd_robustH <- function(X, rank=NULL, weights = NULL, shrinkage = 0,
                             shrinkage_coeff = 1, max_iter = 100L,
-                            tol = 1e-7, warn_nonconvergence = FALSE){
+                            tol = 1e-7, irls_max_iter = 1000L,
+                            irls_tol = 1e-5,
+                            warn_nonconvergence = FALSE){
 
   if(is.null(rank)){
     decomposition <- RobRSVD.all(X, weights = weights, shrinkage = shrinkage,
                                  shrinkage_coeff = shrinkage_coeff,
                                  max_iter = max_iter, tol = tol,
+                                 irls_max_iter = irls_max_iter,
+                                 irls_tol = irls_tol,
                                  warn_nonconvergence = warn_nonconvergence)
     decomposition
   } else{
@@ -34,6 +39,8 @@ get_svd_robustH <- function(X, rank=NULL, weights = NULL, shrinkage = 0,
                                  shrinkage = shrinkage,
                                  shrinkage_coeff = shrinkage_coeff,
                                  max_iter = max_iter, tol = tol,
+                                 irls_max_iter = irls_max_iter,
+                                 irls_tol = irls_tol,
                                  warn_nonconvergence = warn_nonconvergence)
     decomposition
   }
@@ -731,10 +738,26 @@ get_block_matrix <- function(ajive_output, k, type = c("joint", "individual", "r
     )
   }
   type <- match.arg(type)
-  # block_decomps layout per block k: individual at 3k-2, joint at 3k-1, residual at 3k
-  if (type == "joint")       return(ajive_output$block_decomps[[3L * (k - 1L) + 2L]][["full"]])
-  if (type == "individual")  return(ajive_output$block_decomps[[3L * (k - 1L) + 1L]][["full"]])
-  if (type == "residual")    return(ajive_output$block_decomps[[3L * k]])
+  if (!is.numeric(k) || length(k) != 1L || is.na(k) || !is.finite(k) ||
+      k != as.integer(k)) {
+    cli::cli_abort("`k` must be a positive integer Data Block index.")
+  }
+  k <- as.integer(k)
+
+  record <- .get_block_decomp(ajive_output, k, type)
+  if (type %in% c("joint", "individual") && !is.matrix(record[["full"]])) {
+    return(NA)
+  }
+
+  tryCatch(
+    .get_component_matrix(ajive_output, k, type),
+    rajiveplus_component_matrix_unavailable = function(cnd) {
+      if (identical(cnd$reason, "residual_not_stored")) {
+        return(NA)
+      }
+      stop(cnd)
+    }
+  )
 }
 
 

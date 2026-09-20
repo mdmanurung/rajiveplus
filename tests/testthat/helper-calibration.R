@@ -93,10 +93,13 @@ signal_blocks <- function(K, n, pks, rankJ, rankA, sd_noise = 1, seed = 42L) {
 #'
 #' @return n x r matrix whose columns lie in the column space of perp_basis.
 haar_perp_sample <- function(perp_basis, r) {
+  if (r > ncol(perp_basis)) {
+    stop("`r` cannot exceed the complement dimension.", call. = FALSE)
+  }
   nr <- nrow(perp_basis)
-  Q  <- qr.Q(qr(matrix(stats::rnorm(nr * r), nr, r)))
-  # Project Q onto the perp subspace
-  perp_basis %*% (t(perp_basis) %*% Q)
+  raw <- matrix(stats::rnorm(nr * r), nr, r)
+  projected <- perp_basis %*% crossprod(perp_basis, raw)
+  qr.Q(qr(projected), complete = FALSE)[, seq_len(r), drop = FALSE]
 }
 
 # ---------------------------------------------------------------------------

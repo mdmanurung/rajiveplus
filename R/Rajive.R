@@ -254,6 +254,27 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   identifiability_norm <- .match_identifiability_norm(identifiability_norm)
   missing <- match.arg(missing)
   uncertainty <- match.arg(uncertainty)
+  blocks <- .validate_data_blocks(blocks, allow_missing = missing == "native")
+  controls <- .validate_fit_controls(
+    blocks = blocks,
+    initial_signal_ranks = initial_signal_ranks,
+    full = full,
+    n_wedin_samples = n_wedin_samples,
+    n_rand_dir_samples = n_rand_dir_samples,
+    joint_rank = joint_rank,
+    n_perm_samples = n_perm_samples,
+    num_cores = num_cores,
+    seed = seed,
+    allow_native_rank = missing == "native"
+  )
+  initial_signal_ranks <- controls$initial_signal_ranks
+  full <- controls$full
+  n_wedin_samples <- controls$n_wedin_samples
+  n_rand_dir_samples <- controls$n_rand_dir_samples
+  joint_rank <- controls$joint_rank
+  n_perm_samples <- controls$n_perm_samples
+  num_cores <- controls$num_cores
+  seed <- controls$seed
   if (identifiability_norm_defaulted) {
     .inform_identifiability_norm_default()
   }
@@ -340,50 +361,29 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                          rank_only=FALSE) {
 
   identifiability_norm <- .match_identifiability_norm(identifiability_norm)
-  num_cores <- max(1L, as.integer(num_cores))
-  if (!is.na(seed)) set.seed(as.integer(seed))
-
-  # Abort early with clear classes/messages for invalid inputs.
-  if (!is.list(blocks) || length(blocks) < 1L) {
-    cli::cli_abort(
-      c("`blocks` must be a non-empty list of numeric matrices."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (length(initial_signal_ranks) != length(blocks)) {
-    cli::cli_abort(
-      c("`initial_signal_ranks` must have one entry per block.",
-        "x" = "Got {.val {length(initial_signal_ranks)}} ranks for {.val {length(blocks)}} blocks."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (!all(vapply(blocks, is.matrix, logical(1L)))) {
-    cli::cli_abort(
-      c("Every element of `blocks` must be a matrix."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (!all(vapply(blocks, function(x) all(is.finite(x)), logical(1L)))) {
-    cli::cli_abort(
-      c("All entries of each block must be finite (no NA/NaN/Inf)."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-
-  blocks <- lapply(seq_along(blocks), function(k) {
-    x <- blocks[[k]]
-    bad_cols <- apply(x, 2L, stats::sd) < .Machine$double.eps^0.5
-    if (any(bad_cols)) {
-      cli::cli_warn(
-        c("Degenerate column(s) in block {.val {k}} dropped automatically.",
-          "i" = "{.val {sum(bad_cols)}} column(s) with near-zero variance removed."),
-        class = "rajiveplus_degenerate_block"
-      )
-      x[, !bad_cols, drop = FALSE]
-    } else {
-      x
-    }
-  })
+  blocks <- .validate_data_blocks(blocks, allow_missing = FALSE)
+  prepared <- .prepare_complete_blocks(blocks)
+  blocks <- prepared$blocks
+  controls <- .validate_fit_controls(
+    blocks = blocks,
+    initial_signal_ranks = initial_signal_ranks,
+    full = full,
+    n_wedin_samples = n_wedin_samples,
+    n_rand_dir_samples = n_rand_dir_samples,
+    joint_rank = joint_rank,
+    n_perm_samples = n_perm_samples,
+    num_cores = num_cores,
+    seed = seed
+  )
+  initial_signal_ranks <- controls$initial_signal_ranks
+  full <- controls$full
+  n_wedin_samples <- controls$n_wedin_samples
+  n_rand_dir_samples <- controls$n_rand_dir_samples
+  joint_rank <- controls$joint_rank
+  n_perm_samples <- controls$n_perm_samples
+  num_cores <- controls$num_cores
+  seed <- controls$seed
+  if (!is.na(seed)) set.seed(seed)
 
   n_obs <- nrow(blocks[[1L]])
   if (n_obs < sum(initial_signal_ranks)) {
@@ -454,15 +454,17 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   joint_scores <- out$joint_scores
 
   joint_rank <- dim(joint_scores)[2]
+  method_profile <- .resolve_method_profile(
+    "RJP-BASE", identifiability_norm
+  )
 
   if (isTRUE(rank_only)) {
-    rank_decomposition <- list(
+    return(.new_rajive_rank_only(
       joint_scores = joint_scores,
       joint_rank = joint_rank,
-      joint_rank_sel = joint_rank_sel_results
-    )
-    class(rank_decomposition) <- "rajive_rank_only"
-    return(rank_decomposition)
+      joint_rank_sel = joint_rank_sel_results,
+      method_profile = method_profile
+    ))
   }
 
   # step 3: final decomposition -----------------------------------------------------
@@ -475,15 +477,22 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
       full = full
     ), blocks, sv_thresholds)
 
+  block_decomps <- .restore_component_features(
+    block_decomps,
+    original_blocks = prepared$original_blocks,
+    feature_map = prepared$feature_map
+  )
 
 
-  jive_decomposition <- list(block_decomps=block_decomps)
-  jive_decomposition[['joint_scores']] <- joint_scores
-  jive_decomposition[['joint_rank']] <- joint_rank
 
-  jive_decomposition[['joint_rank_sel']] <- joint_rank_sel_results
-  class(jive_decomposition) <- "rajive"
-  jive_decomposition
+  .new_rajive(
+    block_decomps = block_decomps,
+    joint_scores = joint_scores,
+    joint_rank = joint_rank,
+    joint_rank_sel = joint_rank_sel_results,
+    feature_map = prepared$feature_map,
+    method_profile = method_profile
+  )
 }
 
 
@@ -654,17 +663,14 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
   to_remove <- c()
   for(k in seq_len(K)){
     for(j in seq_len(joint_rank_estimate)){
-
       score <- t(blocks[[k]]) %*% joint_scores[ , j]
       sv <- .identifiability_projection_norm(score, identifiability_norm)
-
       if(sv < sv_thresholds[[k]]){
         message('removing column ', j)
         to_remove <- c(to_remove, j)
         break
       }
     }
-
   }
   to_keep <- setdiff(seq_len(joint_rank_estimate), to_remove)
   joint_rank <- length(to_keep)
@@ -726,9 +732,7 @@ get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, 
   }
 
   indiv_decomposition <- get_svd_robustH(X_orthog)
-
   indiv_rank <- sum(indiv_decomposition[['d']] > sv_threshold)
-
   indiv_decomposition <- truncate_svd(decomposition=indiv_decomposition,
                                       rank=indiv_rank)
   if(full){
@@ -736,7 +740,6 @@ get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, 
   } else{
     indiv_decomposition[['full']] <- NA
   }
-
   indiv_decomposition[['rank']] <- indiv_rank
   indiv_decomposition
 }

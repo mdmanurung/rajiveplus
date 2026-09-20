@@ -1,0 +1,19 @@
+citHeader("To cite rajiveplus in publications use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "rajiveplus: Robust Angle-based Joint and Individual Variation Explained",
+  author = person("Mikhael", "Manurung"),
+  year = "2026",
+  note = "Development version in the 0.2.0-rc1 completion stream",
+  url = "https://github.com/mdmanurung/rajiveplus"
+)
+
+citHeader("rajiveplus extends the original RaJIVE implementation:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "RaJIVE",
+  author = person("Erica", "Ponzi"),
+  url = "https://github.com/ericaponzi/RaJIVE"
+)

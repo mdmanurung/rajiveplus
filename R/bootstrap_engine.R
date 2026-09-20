@@ -280,6 +280,14 @@
       resample = resample
     )
     b_list <- lapply(blocks, function(x) x[idx, , drop = FALSE])
+    # Bootstrap samples contain repeated observations.  Replace inherited
+    # sample identifiers with unique, paired identifiers so that strict input
+    # validation does not mistake a valid resample for duplicate source data.
+    bootstrap_ids <- paste0(".bootstrap_", b, "_", seq_along(idx))
+    b_list <- lapply(b_list, function(x) {
+      rownames(x) <- bootstrap_ids
+      x
+    })
     fit_b <- tryCatch(
       do.call(fit_fun, c(list(b_list, initial_signal_ranks),
                          dots)),

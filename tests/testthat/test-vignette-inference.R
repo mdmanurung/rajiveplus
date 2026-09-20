@@ -1,5 +1,7 @@
 test_that("simulated-data inference vignette renders", {
   skip_if_not_installed("rmarkdown")
+  skip_if_not(rmarkdown::pandoc_available("2.8"),
+              "pandoc >= 2.8 is required to render vignettes")
 
   vignette_path <- test_path("../../vignettes/inference.Rmd")
   if (!file.exists(vignette_path)) {

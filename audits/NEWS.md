@@ -1,4 +1,25 @@
-# rajiveplus (development)
+# rajiveplus development (0.2.0-rc1 completion stream)
+
+## Validation and contracts
+
+- Added strict Data Block, sample-alignment, rank, and degenerate-feature
+  contracts with typed conditions and preserved feature mappings.
+- Added strict complete, incomplete, and rank-only result constructors,
+  versioned method-profile metadata, validated simulation/RNG manifests, and
+  common Joint-coordinate access through `get_joint_coordinates()`.
+- Internal candidate helpers exactly reproject Individual matrices into the
+  Joint complement, exhaust all unsupported Joint directions, and handle
+  low-dimensional or saturated Wedin complements against an independent R
+  reference. These statistical changes were not promoted after the paired
+  candidate failed its frozen acceptance gate.
+- Variance diagnostics now expose component energies, all pairwise cross
+  terms, matrix reconstruction error, and energy closure error. The legacy
+  `reconstruction_error` column retains its previous definition.
+- The projector-sum geometric aggregation candidate was rejected after its
+  bounded contamination pilot exceeded the frozen noninferiority margin; the
+  robust aggregation default remains active.
+- Native missing-data fitting, fixed-score jackstraw inference, and pooled PIPs
+  are labeled experimental pending the frozen heavy calibration gates.
 
 ## Breaking changes
 

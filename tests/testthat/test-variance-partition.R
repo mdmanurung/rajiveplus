@@ -5,8 +5,11 @@ test_that("joint_variance_partition returns tidy feature-level schema", {
 
   expected <- c("feature", "block", "joint_ss", "individual_ss",
                 "residual_ss", "component_total_ss", "data_total_ss",
+                "joint_individual_cross", "joint_residual_cross",
+                "individual_residual_cross", "energy_reconstruction_ss",
                 "joint_prop", "individual_prop", "residual_prop",
-                "reconstruction_error")
+                "reconstruction_error", "matrix_reconstruction_error",
+                "energy_closure_error")
   expect_named(got, expected)
   expect_s3_class(got, "data.frame")
   expect_equal(nrow(got), sum(vapply(fx$blocks, ncol, integer(1))))
@@ -36,6 +39,33 @@ test_that("joint_variance_partition proportions sum to one for positive totals",
                rep(1, sum(positive)),
                tolerance = 1e-10)
   expect_equal(got$reconstruction_error, rep(0, nrow(got)), tolerance = 1e-10)
+  expect_equal(got$matrix_reconstruction_error, rep(0, nrow(got)), tolerance = 1e-10)
+  expect_equal(got$energy_closure_error, rep(0, nrow(got)), tolerance = 1e-10)
+})
+
+test_that("variance diagnostics expose cross terms without redefining legacy output", {
+  fx <- make_extractor_fixture()
+  got <- joint_variance_partition(fx$fit, fx$blocks)
+  block1 <- got[got$block == "block1", , drop = FALSE]
+  expect_equal(block1$joint_individual_cross,
+               2 * colSums(fx$joint$block1 * fx$individual$block1))
+  expect_equal(block1$joint_residual_cross,
+               2 * colSums(fx$joint$block1 * fx$residual$block1))
+  expect_equal(block1$individual_residual_cross,
+               2 * colSums(fx$individual$block1 * fx$residual$block1))
+  expect_equal(block1$reconstruction_error,
+               abs(block1$data_total_ss - block1$component_total_ss))
+})
+
+test_that("variance diagnostics use the Observed Mask for incomplete blocks", {
+  fx <- make_extractor_fixture()
+  fx$blocks$block1[1, 1] <- NA_real_
+  got <- joint_variance_partition(fx$fit, fx$blocks)
+  row <- got[got$block == "block1" & got$feature == "block1_feature1", ]
+  observed <- is.finite(fx$blocks$block1[, 1])
+  expect_equal(row$data_total_ss,
+               sum(fx$blocks$block1[observed, 1]^2))
+  expect_true(is.finite(row$matrix_reconstruction_error))
 })
 
 test_that("joint_variance_partition returns finite values for zero-variance features", {

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "environment_flag": "RAJIVE_RUN_SLOW=1",
+  "required_tests": [
+    {
+      "id": "wedin_bound_resampling U-perp samples match Haar-uniform reference",
+      "file": "tests/testthat/test-calibration-wedin.R",
+      "expected_datasets": 1,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "wedin_bound_resampling V-perp samples match Haar-uniform reference",
+      "file": "tests/testthat/test-calibration-wedin.R",
+      "expected_datasets": 1,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "wedin_bound_resampling returns positive norms",
+      "file": "tests/testthat/test-calibration-wedin.R",
+      "expected_datasets": 1,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "joint_rank Type-I rate under H0 is bounded at <= 0.10",
+      "file": "tests/testthat/test-calibration-joint-rank.R",
+      "expected_datasets": 200,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "joint_rank recovers true rank >= 90% of the time under signal",
+      "file": "tests/testthat/test-calibration-joint-rank.R",
+      "expected_datasets": 100,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "jackstraw controls dataset-level null feature discovery",
+      "file": "tests/testthat/test-calibration-jackstraw.R",
+      "expected_datasets": 100,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "jackstraw signal features have elevated detection rate",
+      "file": "tests/testthat/test-calibration-jackstraw.R",
+      "expected_datasets": 50,
+      "optional_dependencies": [],
+      "allow_skip": false
+    }
+  ]
+}

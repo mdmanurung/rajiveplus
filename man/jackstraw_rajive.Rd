@@ -112,6 +112,9 @@ optionally corrected for multiple testing.
 score as recovered from data by RaJIVE, not the unobservable true latent
 factor.  It does not imply that the feature is a causal driver or that
 the association would hold against the true latent score.
+This implementation keeps the estimated scores fixed while generating
+feature-level null statistics. It is therefore an approximate,
+experimental inference procedure rather than a full decomposition refit.
 }
 \note{
 The default \code{"BH"} correction assumes positive regression

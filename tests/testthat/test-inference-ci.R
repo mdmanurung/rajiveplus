@@ -145,11 +145,12 @@ test_that("extract_components merges loading confidence intervals by feature key
   ci <- ci[rev(seq_len(nrow(ci))), , drop = FALSE]
   out <- extract_components(fx$fit, what = "loadings", format = "long", ci = ci)
 
-  key <- paste(out$block, out$component, out$feature)
+  key <- paste(out$block, out$component,
+               rajiveplus:::.ci_feature_key(out$feature))
   ci_key <- paste(
     sub("^block", "", ci$block),
     ci$component,
-    sub("^feature", "", ci$feature)
+    rajiveplus:::.ci_feature_key(ci$feature)
   )
   expect_equal(out$lower, ci$lower[match(key, ci_key)])
   expect_equal(out$upper, ci$upper[match(key, ci_key)])
@@ -161,6 +162,8 @@ test_that("extract_components merges shuffled loading intervals with named block
                       n = 12, pks = c(8, 6), dist.type = 1)
   blocks <- Y$sim_data
   names(blocks) <- c("rna", "protein")
+  rownames(blocks$rna) <- rownames(blocks$protein) <-
+    paste0("sample", seq_len(nrow(blocks$rna)))
   colnames(blocks$rna) <- paste0("gene", seq_len(ncol(blocks$rna)))
   colnames(blocks$protein) <- paste0("protein", seq_len(ncol(blocks$protein)))
   fit <- Rajive(blocks, c(2L, 2L),
@@ -182,6 +185,9 @@ test_that("extract_components merges shuffled loading intervals with named block
   ci <- ci[rev(seq_len(nrow(ci))), , drop = FALSE]
   out <- extract_components(fit, what = "loadings", format = "long", ci = ci)
 
+  expect_true(all(is.finite(ci$lower)))
+  expect_true(all(is.finite(ci$upper)))
+  expect_true(all(ci$n_replicates > 0L))
   expect_equal(out$lower, ci$lower[match(out$loading, ci$estimate)])
   expect_equal(out$upper, ci$upper[match(out$loading, ci$estimate)])
 })

@@ -27,7 +27,7 @@ test_that("wedin_bound_resampling U-perp samples match Haar-uniform reference", 
     X        <- Y$sim_data[[1]]
     svd_X    <- svd(X)
     signal_r <- 5L
-    # U-perp: columns of U orthogonal to the signal subspace
+    signal_basis <- svd_X$u[, seq_len(signal_r), drop = FALSE]
     perp_basis <- svd_X$u[, -(1:signal_r), drop = FALSE]
 
     num_samples <- 200L
@@ -35,7 +35,7 @@ test_that("wedin_bound_resampling U-perp samples match Haar-uniform reference", 
     # -- Current implementation --
     cur <- rajiveplus:::wedin_bound_resampling(
       X            = X,
-      perp_basis   = perp_basis,
+      signal_basis = signal_basis,
       right_vectors = FALSE,
       num_samples  = num_samples,
       num_cores    = 1L
@@ -43,7 +43,7 @@ test_that("wedin_bound_resampling U-perp samples match Haar-uniform reference", 
 
     # -- Haar-uniform reference (same norm computation) --
     ref <- replicate(num_samples, {
-      q    <- haar_perp_sample(perp_basis, r = ncol(perp_basis))
+      q    <- haar_perp_sample(perp_basis, r = signal_r)
       norm(t(q) %*% X, type = "2")
     })
 
@@ -63,20 +63,21 @@ test_that("wedin_bound_resampling V-perp samples match Haar-uniform reference", 
     X        <- Y$sim_data[[1]]
     svd_X    <- svd(X)
     signal_r <- 5L
+    signal_basis_v <- svd_X$v[, seq_len(signal_r), drop = FALSE]
     perp_basis_v <- svd_X$v[, -(1:signal_r), drop = FALSE]
 
     num_samples <- 200L
 
     cur <- rajiveplus:::wedin_bound_resampling(
       X             = X,
-      perp_basis    = perp_basis_v,
+      signal_basis  = signal_basis_v,
       right_vectors = TRUE,
       num_samples   = num_samples,
       num_cores     = 1L
     )
 
     ref <- replicate(num_samples, {
-      q    <- haar_perp_sample(perp_basis_v, r = ncol(perp_basis_v))
+      q    <- haar_perp_sample(perp_basis_v, r = signal_r)
       norm(X %*% q, type = "2")
     })
 
@@ -98,11 +99,12 @@ test_that("wedin_bound_resampling returns positive norms", {
                             n = 50, pks = c(30, 25), dist.type = 1)
     X        <- Y$sim_data[[1]]
     svd_X    <- svd(X)
+    signal_basis <- svd_X$u[, 1:4, drop = FALSE]
     perp_basis <- svd_X$u[, -(1:4), drop = FALSE]
 
     cur <- rajiveplus:::wedin_bound_resampling(
       X             = X,
-      perp_basis    = perp_basis,
+      signal_basis  = signal_basis,
       right_vectors = FALSE,
       num_samples   = 100L,
       num_cores     = 1L

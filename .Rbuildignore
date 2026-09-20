@@ -20,3 +20,8 @@
 ^test_output\.txt$
 ^test_output\.log$
 ^audits$
+^scratch$
+^jobs$
+^scripts$
+^validation$
+^CONTEXT\.md$
