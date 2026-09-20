@@ -171,7 +171,10 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #' Compute posterior inclusion probabilities (PIPs) from p-values
 #'
 #' Wraps \code{qvalue::lfdr()} to compute \code{PIP = 1 - lfdr} for a vector
-#' of p-values.  Called once per grouping unit when \code{pip = TRUE}.
+#' of p-values. Called once per grouping unit when \code{pip = TRUE}. If
+#' automatic pi0 estimation fails for discrete empirical p-values, the helper
+#' records a conservative fallback to \code{pi0 = 1}; non-finite local FDR
+#' values are conservatively replaced by one.
 #'
 #' @param pvalues numeric vector of p-values in (0, 1].
 #' @param pi0     passed to \code{qvalue::lfdr()} as \code{pi0}. \code{NULL}
@@ -181,10 +184,29 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #'
 #' @keywords internal
 .pip_from_pvalues <- function(pvalues, pi0 = NULL) {
+  if (!is.numeric(pvalues) || !length(pvalues) || anyNA(pvalues) ||
+      any(!is.finite(pvalues)) || any(pvalues < 0 | pvalues > 1)) {
+    stop("'pvalues' must be a finite numeric vector in [0, 1].", call. = FALSE)
+  }
   args <- list(p = pvalues)
   if (!is.null(pi0)) args$pi0 <- pi0
-  lfdr_vals <- do.call(qvalue::lfdr, args)
-  1 - lfdr_vals
+  fallback_used <- FALSE
+  lfdr_vals <- tryCatch(
+    do.call(qvalue::lfdr, args),
+    error = function(error) {
+      if (!is.null(pi0)) stop(error)
+      fallback_used <<- TRUE
+      qvalue::lfdr(pvalues, pi0 = 1)
+    }
+  )
+  nonfinite <- !is.finite(lfdr_vals)
+  if (any(nonfinite)) {
+    lfdr_vals[nonfinite] <- 1
+  }
+  out <- pmin(1, pmax(0, 1 - lfdr_vals))
+  attr(out, "pi0_fallback_used") <- fallback_used
+  attr(out, "nonfinite_lfdr_replaced") <- sum(nonfinite)
+  out
 }
 
 
@@ -213,8 +235,11 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #' factor.  It does not imply that the feature is a causal driver or that
 #' the association would hold against the true latent score.
 #' This implementation keeps the estimated scores fixed while generating
-#' feature-level null statistics. It is therefore an approximate,
-#' experimental inference procedure rather than a full decomposition refit.
+#' feature-level null statistics. It is therefore an approximation rather than
+#' a full decomposition refit. Dataset-level simulation calibration covers a
+#' fixed true joint rank with dense signal and appended independent null
+#' features; other dependence, rank-selection, and misspecification regimes
+#' remain experimental.
 #'
 #' @param ajive_output List returned by \code{\link{Rajive}}.
 #' @param blocks List of data matrices (same list passed to
@@ -251,6 +276,8 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #'   component combination).  Larger groups give more stable \eqn{\pi_0}
 #'   estimates and are recommended when each block/component has fewer than
 #'   ~200 features; smaller groups allow \eqn{\pi_0} to vary across components.
+#'   Simulation calibration currently supports the default pooled grouping;
+#'   the component-specific groupings remain experimental.
 #' @param pool Character string controlling how null F-statistics are pooled
 #'   when computing empirical p-values within each block.  One of
 #'   \code{"block"} (default; null statistics from all joint components are
@@ -470,19 +497,39 @@ jackstraw_rajive <- function(ajive_output, blocks,
   attr(results, "joint_rank") <- joint_rank
   attr(results, "n_blocks")   <- K
   attr(results, "n_tests")    <- total_tests
-  attr(results, "inference_status") <- "experimental_fixed_score_approximation"
+  attr(results, "inference_status") <-
+    "simulation_calibrated_fixed_score_approximation_v1"
   attr(results, "pip_status") <- if (isTRUE(pip)) {
-    "experimental_pooling_assumptions_unvalidated"
+    if (identical(pip_group, "pooled")) {
+      "simulation_calibrated_pooled_lfdr_v1"
+    } else {
+      "experimental_component_specific_pooling"
+    }
   } else {
     "not_requested"
   }
+  attr(results, "calibration_scope") <- paste(
+    "fixed true joint rank; dense signal; appended independent null features;",
+    "100 deterministic simulated datasets"
+  )
 
   # ---------- PIP computation -----------------------------------------------
   if (pip) {
+    pip_fallback_count <- 0L
+    pip_nonfinite_count <- 0L
+    record_pip_diagnostics <- function(values) {
+      pip_fallback_count <<- pip_fallback_count +
+        as.integer(isTRUE(attr(values, "pi0_fallback_used")))
+      pip_nonfinite_count <<- pip_nonfinite_count +
+        as.integer(attr(values, "nonfinite_lfdr_replaced"))
+      as.numeric(values)
+    }
     if (pip_group == "pooled") {
       all_pv <- unlist(lapply(results, function(br)
         lapply(br, `[[`, "p_values")), use.names = FALSE)
-      all_pip <- .pip_from_pvalues(all_pv, pi0 = pip_pi0)
+      all_pip <- record_pip_diagnostics(
+        .pip_from_pvalues(all_pv, pi0 = pip_pi0)
+      )
       off2 <- 0L
       for (k in seq_len(K)) {
         for (j in seq_len(joint_rank)) {
@@ -495,7 +542,9 @@ jackstraw_rajive <- function(ajive_output, blocks,
       for (j in seq_len(joint_rank)) {
         pv_j <- unlist(lapply(results, function(br) br[[j]]$p_values),
                        use.names = FALSE)
-        pip_j <- .pip_from_pvalues(pv_j, pi0 = pip_pi0)
+        pip_j <- record_pip_diagnostics(
+          .pip_from_pvalues(pv_j, pi0 = pip_pi0)
+        )
         off2 <- 0L
         for (k in seq_len(K)) {
           n_k <- length(results[[k]][[j]]$p_values)
@@ -508,11 +557,15 @@ jackstraw_rajive <- function(ajive_output, blocks,
       for (k in seq_len(K)) {
         for (j in seq_len(joint_rank)) {
           pv_kj <- results[[k]][[j]]$p_values
-          results[[k]][[j]]$pip <- .pip_from_pvalues(pv_kj, pi0 = pip_pi0)
+          results[[k]][[j]]$pip <- record_pip_diagnostics(
+            .pip_from_pvalues(pv_kj, pi0 = pip_pi0)
+          )
         }
       }
     }
     attr(results, "pip_group") <- pip_group
+    attr(results, "pip_pi0_fallback_count") <- pip_fallback_count
+    attr(results, "pip_nonfinite_lfdr_count") <- pip_nonfinite_count
   }
 
   class(results) <- "jackstraw_rajive"

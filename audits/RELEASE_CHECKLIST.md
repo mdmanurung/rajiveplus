@@ -20,9 +20,10 @@ are in `method_profiles.json` and the frozen paired manifest.
 | README, vignettes, pkgdown site | Mandatory | `PASS` | `README_render.log`; `source_build.log`; `pkgdown_build.log` | Pandoc 3.4; canonical generators; source build regenerated all seven vignettes; final lazy site refresh passed. |
 | Upstream compatibility pin | Mandatory for compatibility claim | `BLOCKED` | `baseline_receipt.json` | Local clone absent; no commit guessed. |
 | Geometric candidate | Scientific default gate | `REJECT` | `stage_c_candidate_decision.json` | Frozen +0.02 degradation rule. Default retained. |
-| Native missing recovery/coverage | Experimental | `NOT RUN` | `stage_d_status.json` | Bounded pilot is insufficient for acceptance. |
-| Jackstraw/PIP calibration | Experimental | `NOT RUN` | `validation/slow_tests.json` | Heavy run requires separate scheduler/remote authority. |
+| Native missing recovery/coverage | Experimental, scoped | `PASS` | `gates/native-jackstraw-pip-20260920-v2/native-recovery.tsv`; `native-coverage.tsv` | 60 recovery datasets across MCAR, MAR-like, and structured-row missingness plus 30 MCAR bootstrap datasets; stale after native method/control changes. MNAR and broad application claims remain unsupported. |
+| Jackstraw/PIP calibration | Experimental, scoped | `PASS` | `gates/native-jackstraw-pip-20260920-v2/jackstraw-pip.tsv`; JUnit receipts | 100 fixed-rank datasets with dense signal and appended independent nulls; pooled PIP only. Stale after jackstraw, PIP, simulation, or threshold changes. |
 | Remote CI and platform matrix | Mandatory for release | `NOT RUN` | `.github/workflows/R-CMD-check.yaml` | Local execution cannot establish remote platforms. |
-| Scheduler validation | Optional continuation | `NOT RUN` | `jobs/rajiveplus_validation.slurm` | Submission requires separate authority. |
+| Complete slow manifest | Mandatory for broad calibration claims | `FAIL` | `gates/calibration-20260920-v3/test-calibration-wedin.xml` | Requested native/jackstraw/PIP scope passes independently; the broader gate remains red because the pre-existing Wedin U-space Haar test fails. |
+| Scheduler validation | Optional continuation | `NOT RUN` | `jobs/rajiveplus_validation.slurm` | Local deterministic execution completed the requested calibration scope; scheduler execution remains optional. |
 | BMV regeneration | Application evidence | `NOT RUN` | `stage_d_status.json` | Active 120-sample regeneration is outside local package completion. |
 | Version bump, publication, tag | Release operation | `BLOCKED` | Frozen plan authorization boundary | Requires remaining mandatory gates plus explicit maintainer authorization. |

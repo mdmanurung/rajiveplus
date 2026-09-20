@@ -15,7 +15,7 @@ rajive_missing_control(
   svd_shrinkage_coeff = 1,
   max_iter = 5L,
   tol = 0.01,
-  outer_max_iter = NULL,
+  outer_max_iter = 30L,
   completion_max_iter = NULL,
   irls_max_iter = 1000L,
   outer_tol = NULL,
@@ -57,9 +57,10 @@ weighted SVD completion subproblems.}
 \item{tol}{Relative convergence tolerance for native missing-data completion
 objectives.}
 
-\item{outer_max_iter, completion_max_iter}{Optional separate iteration caps
-for the outer native loop and weighted low-rank completion. Each inherits
-`max_iter` when omitted.}
+\item{outer_max_iter, completion_max_iter}{Separate iteration caps for the
+outer native loop and weighted low-rank completion. The outer loop defaults
+to 30 iterations so structured-missing fits can reach the recorded
+tolerance; completion inherits `max_iter` when omitted.}
 
 \item{irls_max_iter}{Iteration cap for inner robust IRLS fits.}
 

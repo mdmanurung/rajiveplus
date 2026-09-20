@@ -14,6 +14,13 @@ test_that("method-profile manifest defines every frozen decision field", {
     all(required %in% names(x$config))
   }, logical(1L))))
   expect_identical(manifest$`RJP-COMPAT`$status, "benchmark_only")
+  expect_identical(
+    manifest$`RJP-NATIVE-BASE`$status,
+    "simulation_calibrated_declared_missingness_v1"
+  )
+  expect_identical(
+    manifest$`RJP-NATIVE-BASE`$config$outer_iteration_cap, 30L
+  )
 })
 
 test_that("robust SVD profiles separate references and blocked upstream", {

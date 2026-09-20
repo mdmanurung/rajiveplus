@@ -54,7 +54,9 @@ all tests), \code{"component"} (one call per joint component across all
 blocks), or \code{"block_component"} (one call per block \eqn{\times}
 component combination).  Larger groups give more stable \eqn{\pi_0}
 estimates and are recommended when each block/component has fewer than
-~200 features; smaller groups allow \eqn{\pi_0} to vary across components.}
+~200 features; smaller groups allow \eqn{\pi_0} to vary across components.
+Simulation calibration currently supports the default pooled grouping;
+the component-specific groupings remain experimental.}
 
 \item{pool}{Character string controlling how null F-statistics are pooled
 when computing empirical p-values within each block.  One of
@@ -113,8 +115,11 @@ score as recovered from data by RaJIVE, not the unobservable true latent
 factor.  It does not imply that the feature is a causal driver or that
 the association would hold against the true latent score.
 This implementation keeps the estimated scores fixed while generating
-feature-level null statistics. It is therefore an approximate,
-experimental inference procedure rather than a full decomposition refit.
+feature-level null statistics. It is therefore an approximation rather than
+a full decomposition refit. Dataset-level simulation calibration covers a
+fixed true joint rank with dense signal and appended independent null
+features; other dependence, rank-selection, and misspecification regimes
+remain experimental.
 }
 \note{
 The default \code{"BH"} correction assumes positive regression

@@ -2,6 +2,16 @@
 
 ## Validation and contracts
 
+- Native missing-data fitting now allows 30 outer iterations by default while
+  retaining the five-iteration inner completion default. Dataset-level
+  calibration covers MCAR, MAR-like, and structured-row missingness and MCAR
+  bootstrap score coverage.
+- Fixed-score jackstraw and default pooled PIPs now have a deterministic,
+  truth-labelled 100-dataset calibration. Automatic PIP pi0 estimation falls
+  back conservatively to pi0 = 1 when discrete empirical p-values make the
+  qvalue spline undefined, and records that fallback in result metadata.
+- Slow calibration runs each manifest-listed file in an isolated fail-closed R
+  process and verifies JUnit tests plus per-replicate TSV evidence.
 - Added strict Data Block, sample-alignment, rank, and degenerate-feature
   contracts with typed conditions and preserved feature mappings.
 - Added strict complete, incomplete, and rank-only result constructors,
@@ -19,7 +29,9 @@
   bounded contamination pilot exceeded the frozen noninferiority margin; the
   robust aggregation default remains active.
 - Native missing-data fitting, fixed-score jackstraw inference, and pooled PIPs
-  are labeled experimental pending the frozen heavy calibration gates.
+  remain scoped methods: their declared simulation gates pass, while MNAR,
+  automatic-rank inference, component-specific PIP pooling, and application
+  validity remain experimental.
 
 ## Breaking changes
 

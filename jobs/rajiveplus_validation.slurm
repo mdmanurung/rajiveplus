@@ -24,6 +24,7 @@ fi
 export R_LIBS_USER="${job_root}/library"
 export TMPDIR="${job_root}/tmp"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 BLIS_NUM_THREADS=1
+export RAJIVE_CALIBRATION_CORES="${SLURM_CPUS_PER_TASK}"
 export RAJIVE_GATE_DIR="${job_root}/receipts"
 bash scripts/run_slow_gate.sh
 cp -a "${job_root}/receipts" "${SLURM_SUBMIT_DIR}/logs/${SLURM_JOB_ID}-receipts"

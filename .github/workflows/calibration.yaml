@@ -19,6 +19,7 @@ jobs:
       OPENBLAS_NUM_THREADS: 1
       MKL_NUM_THREADS: 1
       BLIS_NUM_THREADS: 1
+      RAJIVE_CALIBRATION_CORES: 2
     steps:
       - uses: actions/checkout@v4
       - uses: r-lib/actions/setup-r@v2

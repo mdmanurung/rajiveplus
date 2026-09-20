@@ -17,6 +17,9 @@ numeric vector of PIPs in [0, 1] (same length as \code{pvalues}).
 }
 \description{
 Wraps \code{qvalue::lfdr()} to compute \code{PIP = 1 - lfdr} for a vector
-of p-values.  Called once per grouping unit when \code{pip = TRUE}.
+of p-values. Called once per grouping unit when \code{pip = TRUE}. If
+automatic pi0 estimation fails for discrete empirical p-values, the helper
+records a conservative fallback to \code{pi0 = 1}; non-finite local FDR
+values are conservatively replaced by one.
 }
 \keyword{internal}

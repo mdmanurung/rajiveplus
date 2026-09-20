@@ -8,6 +8,14 @@ test_that("validation RNG streams are deterministic and restore global state", {
   expect_identical(.Random.seed, before)
 })
 
+test_that("slow calibration RNG helper restores the caller seed", {
+  set.seed(7721L)
+  before <- .Random.seed
+  value <- with_lecuyer_seed(7722L, stats::runif(3L))
+  expect_length(value, 3L)
+  expect_identical(.Random.seed, before)
+})
+
 test_that("validation seed manifest separates data and method streams", {
   manifest <- rajiveplus:::.validation_seed_manifest(
     scenarios = c("clean", "noisy"), exploratory_replicates = 2L,

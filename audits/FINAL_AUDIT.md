@@ -21,10 +21,14 @@ remote platform CI, the upstream source pin, scientific calibration gates, and
 explicit release authorization remain outstanding. No scheduler job, remote
 write, shared-library mutation, version bump, publication, or tag occurred.
 
-Residual scientific risks are concentrated in native convergence and coverage,
-jackstraw/PIP calibration, compatibility with the unpinned upstream source,
-and the absence of regenerated BMV application evidence. The bounded pilots
-must not be interpreted as biological or broad statistical validation.
+Native convergence/recovery and MCAR bootstrap coverage now pass a scoped
+dataset-level calibration, and fixed-rank jackstraw plus pooled PIP pass their
+declared 100-dataset signal/null calibration. These receipts do not establish
+MNAR validity, component-specific PIP pooling, automatic-rank inference, or
+application-level biological validity. The complete slow manifest remains red
+because the pre-existing Wedin U-space Haar comparison fails. Other residual
+risks are compatibility with the unpinned upstream source and the absence of
+regenerated BMV application evidence.
 
 The pre-existing `.vscode/settings.json` change remains preserved and outside
 this completion work.

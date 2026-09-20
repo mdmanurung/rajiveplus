@@ -59,7 +59,7 @@
     ),
     `RJP-NATIVE-BASE` = list(
       version = 1L,
-      status = "experimental_native_baseline",
+      status = "simulation_calibrated_declared_missingness_v1",
       config = list(
         block_factorization = "weighted_robust_svd_with_completion",
         basis_extraction_tolerance = "none_raw_weighted_factors",
@@ -73,7 +73,9 @@
         individual_constraint = "masked_residual_fit",
         individual_refactorization = "weighted_robust_fit",
         robust_scale_policy = "iterationwise_observed_mad",
-        fallback_behavior = "weighted_fit_may_fallback_to_classical_svd"
+        fallback_behavior = "weighted_fit_may_fallback_to_classical_svd",
+        outer_iteration_cap = 30L,
+        calibration_scope = "MCAR_MAR_like_structured_rows_fixed_joint_rank"
       )
     )
   )

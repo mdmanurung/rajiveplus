@@ -106,6 +106,12 @@ test_that("native missing control exposes completion iteration settings", {
   expect_true(ctrl$warn_nonconvergence)
 })
 
+test_that("native missing control gives the outer loop enough iterations", {
+  ctrl <- rajive_missing_control()
+  expect_identical(ctrl$outer_max_iter, 30L)
+  expect_identical(ctrl$completion_max_iter, 5L)
+})
+
 test_that("native missing controls separate outer completion and IRLS layers", {
   ctrl <- rajive_missing_control(
     max_iter = 9L, tol = 0.2,

@@ -32,11 +32,48 @@ skip_if_not_slow <- function() {
 #'
 #' @return The value of `expr`.
 with_lecuyer_seed <- function(seed, expr) {
+  seed_exists <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  if (seed_exists) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  }
   prev_kind <- RNGkind()
-  RNGkind("L'Ecuyer-CMRG")
-  set.seed(seed)
-  on.exit(do.call(RNGkind, as.list(prev_kind)), add = TRUE)
+  on.exit({
+    do.call(RNGkind, as.list(prev_kind))
+    if (seed_exists) {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  set.seed(as.integer(seed))
   force(expr)
+}
+
+# Run independently seeded calibration replicates without coupling results to
+# worker scheduling or another replicate's random-number consumption.
+calibration_lapply <- function(items, fun) {
+  cores <- suppressWarnings(as.integer(
+    Sys.getenv("RAJIVE_CALIBRATION_CORES", "1")
+  ))
+  if (length(cores) != 1L || is.na(cores) || cores < 1L) cores <- 1L
+  cores <- min(cores, length(items))
+  if (.Platform$OS.type != "windows" && cores > 1L) {
+    parallel::mclapply(items, fun, mc.cores = cores, mc.set.seed = FALSE)
+  } else {
+    lapply(items, fun)
+  }
+}
+
+write_calibration_evidence <- function(rows, filename) {
+  gate_dir <- Sys.getenv("RAJIVE_GATE_DIR", unset = "")
+  if (!nzchar(gate_dir)) return(invisible(NULL))
+  dir.create(gate_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(gate_dir, filename)
+  utils::write.table(
+    rows, path, sep = "\t", quote = TRUE, row.names = FALSE, na = "NA"
+  )
+  invisible(path)
 }
 
 # ---------------------------------------------------------------------------

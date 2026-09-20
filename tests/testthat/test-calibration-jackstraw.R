@@ -1,106 +1,146 @@
-# Slow calibration tests for jackstraw_rajive().
+# Slow dataset-level calibration for fixed-score jackstraw and pooled PIPs.
 #
-# Design note: Rajive() applies an L2 identifiability filter by default,
-# dropping joint components whose projection onto a block falls below that
-# block's sv_threshold. Use identifiability_norm = "l1" for original RaJIVE
-# norm(score) parity.
-# On pure-noise data, this filter correctly drops even a forced joint_rank=1
-# component.  Tests therefore use ajive.data.sim() to generate blocks with
-# genuine dense joint signal (which passes the filter), then augment each
-# block with p_null appended pure-noise columns.  Only those null columns'
-# jackstraw p-values are used for the null-uniformity assertion.
-#
-# Run with:
-#   RAJIVE_RUN_SLOW=1 conda run -n R4_51 Rscript -e \
-#     "devtools::test_file('tests/testthat/test-calibration-jackstraw.R')"
-#
-# Reference: Yang X et al. (2021) arXiv:2109.12272 (YHHM 2021).
-# Reference: Phipson B, Smyth GK (2010) Stat. Appl. Genet. Mol. Biol. 9(1).
+# Each simulated dataset contains known dense joint-signal features and appended
+# independent null features. The decomposition rank is fixed to the true rank,
+# so this gate evaluates feature inference conditional on a correctly specified
+# decomposition rather than conflating it with rank-selection performance.
 
-# ---------------------------------------------------------------------------
-# W-M4: Null uniformity — null columns appended to signal blocks
-# ---------------------------------------------------------------------------
+.jackstraw_calibration_cache <- new.env(parent = emptyenv())
 
-test_that("jackstraw controls dataset-level null feature discovery", {
-  skip_if_not_slow()
-
-  # Construction:
-  #   - ajive.data.sim K=2, rankJ=1, rankA=c(3,2), n=60, pks=c(10,8)
-  #     -> dense joint signal in first 10/8 features, passes identifiability filter.
-  #   - Append p_null=40 pure-noise columns to each block.
-  #   - initial_signal_ranks = c(4,3) = rankJ + rankA (full signal space).
-  #   - Collect p-values for null columns (cols 11:50 / 9:48) only.
-  # The replicate, rather than the pooled feature, is the inference unit.
-  # Rank-zero fits remain in the denominator with zero discoveries.
-  with_lecuyer_seed(2026, {
-    B      <- 100L
-    p_null <- 40L
-    n      <- 60L
-    replicate_fpr <- replicate(B, {
-      Y <- ajive.data.sim(K = 2, rankJ = 1L, rankA = c(3L, 2L),
-                          n = n, pks = c(10L, 8L), dist.type = 1)
-      # augment each block with null columns
-      blk_aug <- lapply(Y$sim_data, function(x)
-        cbind(x, matrix(stats::rnorm(n * p_null), n, p_null)))
-
-      fit <- Rajive(blk_aug,
-                    initial_signal_ranks = c(4L, 3L),
-                    num_cores = 1L)
-      if (fit$joint_rank == 0L) return(0)
-
-      js <- jackstraw_rajive(fit, blk_aug, n_null = 20L, correction = "none")
-      n_sig <- c(10L, 8L)   # original sim feature counts
-      null_p <- unlist(lapply(seq_len(attr(js, "n_blocks")), function(k) {
-        lapply(seq_len(attr(js, "joint_rank")), function(j) {
-          js[[k]][[j]]$p_values[(n_sig[k] + 1L):(n_sig[k] + p_null)]
-        })
-      }), use.names = FALSE)
-      mean(null_p <= 0.05, na.rm = TRUE)
+.run_jackstraw_pip_calibration <- function() {
+  if (exists("rows", envir = .jackstraw_calibration_cache, inherits = FALSE)) {
+    return(get("rows", envir = .jackstraw_calibration_cache, inherits = FALSE))
+  }
+  seeds <- .validation_seed_manifest(
+    "joint_signal_with_appended_nulls",
+    exploratory_replicates = 0L, final_replicates = 100L,
+    master_seed = 20261300L
+  )
+  rows <- calibration_lapply(seq_len(nrow(seeds)), function(index) {
+    item <- seeds[index, ]
+    started <- proc.time()[["elapsed"]]
+    tryCatch(.with_validation_rng(item$data_seed, {
+      n <- 48L
+      signal_features <- c(12L, 10L)
+      null_features <- 24L
+      simulation <- ajive.data.sim(
+        K = 2L, rankJ = 1L, rankA = c(2L, 1L), n = n,
+        pks = signal_features, dist.type = 1
+      )
+      blocks <- lapply(simulation$sim_data, function(block) {
+        cbind(
+          block,
+          matrix(stats::rnorm(n * null_features), n, null_features)
+        )
+      })
+      fit <- Rajive(
+        blocks, c(3L, 2L), joint_rank = 1L,
+        n_wedin_samples = NA, n_rand_dir_samples = NA,
+        n_perm_samples = NA, num_cores = 1L
+      )
+      inference <- .with_validation_rng(item$method_seed, jackstraw_rajive(
+        fit, blocks, n_null = 15L, correction = "BH",
+        pip = TRUE, pip_group = "pooled"
+      ))
+      feature_rows <- do.call(rbind, lapply(seq_along(inference), function(k) {
+        result <- inference[[k]][[1L]]
+        data.frame(
+          block = k,
+          feature = seq_along(result$p_values),
+          p_value = result$p_values,
+          p_adjusted = result$p_adj,
+          pip = result$pip,
+          signal = seq_along(result$p_values) <= signal_features[[k]],
+          stringsAsFactors = FALSE
+        )
+      }))
+      discoveries <- feature_rows$p_adjusted <= 0.05
+      n_signal <- sum(feature_rows$signal)
+      n_null <- sum(!feature_rows$signal)
+      auc <- as.numeric(stats::wilcox.test(
+        feature_rows$pip[feature_rows$signal],
+        feature_rows$pip[!feature_rows$signal],
+        alternative = "greater", exact = FALSE
+      )$statistic) / (n_signal * n_null)
+      data.frame(
+        scenario_id = item$scenario_id,
+        replicate_id = item$replicate_id,
+        data_seed = item$data_seed,
+        method_seed = item$method_seed,
+        status = "PASS",
+        joint_rank = fit$joint_rank,
+        null_raw_fpr = mean(
+          feature_rows$p_value[!feature_rows$signal] <= 0.05
+        ),
+        false_discovery_proportion = if (any(discoveries)) {
+          mean(!feature_rows$signal[discoveries])
+        } else 0,
+        bh_power = mean(discoveries[feature_rows$signal]),
+        null_pip_90_rate = mean(
+          feature_rows$pip[!feature_rows$signal] >= 0.90
+        ),
+        pip_power_50 = mean(
+          feature_rows$pip[feature_rows$signal] >= 0.50
+        ),
+        pip_auc = auc,
+        pip_pi0_fallback_count = attr(inference, "pip_pi0_fallback_count"),
+        pip_nonfinite_lfdr_count = attr(
+          inference, "pip_nonfinite_lfdr_count"
+        ),
+        runtime_seconds = proc.time()[["elapsed"]] - started,
+        error = NA_character_,
+        stringsAsFactors = FALSE
+      )
+    }), error = function(error) {
+      data.frame(
+        scenario_id = item$scenario_id,
+        replicate_id = item$replicate_id,
+        data_seed = item$data_seed,
+        method_seed = item$method_seed,
+        status = "ERROR",
+        joint_rank = NA_integer_,
+        null_raw_fpr = NA_real_,
+        false_discovery_proportion = NA_real_,
+        bh_power = NA_real_,
+        null_pip_90_rate = NA_real_,
+        pip_power_50 = NA_real_,
+        pip_auc = NA_real_,
+        pip_pi0_fallback_count = NA_integer_,
+        pip_nonfinite_lfdr_count = NA_integer_,
+        runtime_seconds = proc.time()[["elapsed"]] - started,
+        error = conditionMessage(error),
+        stringsAsFactors = FALSE
+      )
     })
-
-    mean_fpr <- mean(replicate_fpr)
-    cat(sprintf("\n  [W-M4 null] datasets=%d, mean dataset FPR=%.4f\n",
-                B, mean_fpr))
-    expect_lte(mean_fpr, 0.10,
-               label = paste0("Mean dataset FPR = ", signif(mean_fpr, 3)))
   })
+  rows <- do.call(rbind, rows)
+  write_calibration_evidence(rows, "jackstraw-pip.tsv")
+  assign("rows", rows, envir = .jackstraw_calibration_cache)
+  rows
+}
+
+test_that("jackstraw controls dataset-level null discovery and FDR", {
+  skip_if_not_slow()
+  rows <- .run_jackstraw_pip_calibration()
+  expect_true(all(rows$status == "PASS"), info = paste(rows$error, collapse = "; "))
+  expect_true(all(rows$joint_rank == 1L))
+  expect_lte(mean(rows$null_raw_fpr), 0.10)
+  expect_lte(mean(rows$false_discovery_proportion), 0.10)
 })
 
-# ---------------------------------------------------------------------------
-# W-M4: Power property — signal features detected above null rate
-# ---------------------------------------------------------------------------
-
-test_that("jackstraw signal features have elevated detection rate", {
+test_that("jackstraw retains dataset-level power for declared signal", {
   skip_if_not_slow()
+  rows <- .run_jackstraw_pip_calibration()
+  expect_gte(mean(rows$bh_power), 0.40)
+})
 
-  # ajive.data.sim creates DENSE joint loadings across all features.
-  # Under strong signal, most features are associated with the joint score,
-  # so the fraction with p <= 0.05 should far exceed the 5% null rate.
-  # We assert mean(p <= 0.05) >= 0.30 across B=50 reps.
-  # (Conservative; true loading is dense so detection typically > 60%.)
-  with_lecuyer_seed(9999, {
-    B    <- 50L
-    frac <- replicate(B, {
-      Y <- ajive.data.sim(K = 2, rankJ = 2L, rankA = c(4L, 3L),
-                          n = 60, pks = c(80L, 60L), dist.type = 1)
-      # initial_signal_ranks = rankJ + rankA = c(6, 5)
-      fit <- Rajive(Y$sim_data, initial_signal_ranks = c(6L, 5L),
-                    num_cores = 1L)
-      if (fit$joint_rank == 0L) return(0)
-      js <- jackstraw_rajive(fit, Y$sim_data,
-                             n_null = 20L, correction = "none")
-      # all features; dense loadings -> high p < 0.05 rate
-      all_p <- unlist(lapply(js, function(b) lapply(b, `[[`, "p_values")),
-                      use.names = FALSE)
-      mean(all_p <= 0.05, na.rm = TRUE)
-    })
-
-    mean_frac <- mean(frac)
-    cat(sprintf("  [W-M4 power] mean detection frac = %.4f (B=%d)\n",
-                mean_frac, B))
-
-    expect_gte(mean_frac, 0.30,
-               label = paste0("Mean detection fraction = ", signif(mean_frac, 3),
-                              "; should be >> 0.05 under dense joint signal"))
-  })
+test_that("pooled PIPs separate signal and control high null probabilities", {
+  skip_if_not_slow()
+  skip_if_not_installed("qvalue")
+  rows <- .run_jackstraw_pip_calibration()
+  expect_lte(mean(rows$null_pip_90_rate), 0.05)
+  expect_gte(mean(rows$pip_power_50), 0.50)
+  expect_gte(stats::median(rows$pip_auc), 0.75)
+  expect_lte(mean(rows$pip_pi0_fallback_count > 0L), 0.20)
+  expect_identical(sum(rows$pip_nonfinite_lfdr_count), 0L)
 })
