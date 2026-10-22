@@ -102,12 +102,17 @@
     if (individual == "constrained") {
       projected <- original$full - q %*% crossprod(q, original$full)
       s <- svd(projected, nu = min(dim(projected)), nv = min(dim(projected)))
-      tolerance <- max(dim(projected)) * .Machine$double.eps * max(s$d, 0)
+      # Scale to the preconstraint matrix as well: an exactly removed fit must
+      # not acquire a spurious rank by normalizing roundoff to its own tiny norm.
+      original_scale <- max(svd(original$full, nu = 0L, nv = 0L)$d, 0)
+      tolerance <- max(dim(projected)) * .Machine$double.eps *
+        max(original_scale, s$d, 0)
       rank <- min(original$rank, sum(s$d > tolerance))
       ind <- list(u = s$u[, seq_len(rank), drop = FALSE],
                   d = s$d[seq_len(rank)], v = s$v[, seq_len(rank), drop = FALSE],
                   rank = as.integer(rank))
       ind$full <- svd_reconstruction(ind)
+      ind$constraint_rank_tolerance <- tolerance
     }
     joint <- get_joint_decomposition_robustH(X, geometry$joint_scores, full = TRUE)
     residual <- X - joint$full - ind$full

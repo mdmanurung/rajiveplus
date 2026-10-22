@@ -4,7 +4,8 @@
   fail <- function(message, reason, field = "truth") {
     .abort_invalid_simulation(message, reason, field)
   }
-  if (!is.numeric(geometry_tolerance) || length(geometry_tolerance) != 1L ||
+  if (!is.numeric(geometry_tolerance) || is.complex(geometry_tolerance) ||
+      length(geometry_tolerance) != 1L ||
       !is.finite(geometry_tolerance) || geometry_tolerance <= 0) {
     fail("Geometry tolerance must be a positive finite scalar.", "invalid_tolerance")
   }
@@ -29,8 +30,10 @@
     fail("Blocks must have the same positive sample dimension.", "dimension_mismatch")
   }
   ranks <- c(rj, ri)
-  if (!is.numeric(ranks) || length(rj) != 1L || length(ri) != K ||
-      any(!is.finite(ranks)) || any(ranks < 0 | ranks != floor(ranks))) {
+  if (!is.numeric(ranks) || is.complex(ranks) ||
+      length(rj) != 1L || length(ri) != K ||
+      any(!is.finite(ranks)) ||
+      any(ranks < 0 | ranks > n | ranks != floor(ranks))) {
     fail("Requested ranks must be nonnegative integers matching the blocks.",
          "invalid_ranks")
   }
@@ -76,7 +79,7 @@
   }
   check_metadata <- function(value, expected, name, orthonormal = FALSE) {
     if (is.null(value)) return(0)
-    if (!is.matrix(value) || !is.numeric(value) ||
+    if (!is.matrix(value) || !is.numeric(value) || is.complex(value) ||
         any(!is.finite(value)) || nrow(value) != n ||
         ncol(value) != ncol(expected)) {
       fail("Stored score/basis metadata have invalid dimensions or values.",
@@ -120,7 +123,8 @@
     E <- residual[[k]]
     matrices <- list(X, J, I, E)
     if (ncol(X) < 1L || any(!vapply(matrices, function(x) {
-      is.numeric(x) && identical(dim(x), dim(X)) && all(is.finite(x))
+      is.numeric(x) && !is.complex(x) &&
+        identical(dim(x), dim(X)) && all(is.finite(x))
     }, logical(1L)))) {
       fail("Component matrices must be finite and match their block dimensions.",
            "invalid_component_matrix", paste0("block", k))

@@ -103,3 +103,25 @@ test_that("zero Joint rank and unsupported thresholds are explicit", {
   expect_error(.ablation_require_threshold(c(NA, -Inf)), "BLOCKED")
   expect_equal(.ablation_require_threshold(c(NA, -Inf, 2)), 2)
 })
+
+test_that("exact span projection is invariant to Joint coordinates and removes full overlap", {
+  q <- cbind(c(1, 0, 0, 0), c(.6, .8, 0, 0))
+  I <- matrix(c(1, 2, 3, 4, 2, 1, 4, 3), 4, 2)
+  s <- svd(I)
+  selected <- list(list(u = s$u, d = s$d, v = s$v, rank = 2L, full = I))
+  cache <- list(blocks = list(I))
+  a <- .ablation_finish(cache, list(joint_scores = q), "constrained", selected = selected)
+  b <- .ablation_finish(cache, list(joint_scores = q %*% matrix(c(2, 1, 1, 3), 2)),
+                        "constrained", selected = selected)
+  expect_equal(a$blocks[[1]]$individual$full, b$blocks[[1]]$individual$full,
+               tolerance = 1e-12)
+  q0 <- .ablation_basis(q)
+  s0 <- svd(q0)
+  all_joint <- list(list(u = s0$u, d = s0$d, v = s0$v, rank = 2L, full = q0))
+  c <- .ablation_finish(list(blocks = list(q0)), list(joint_scores = q),
+                        "constrained", selected = all_joint)
+  expect_equal(c$blocks[[1]]$individual$rank, 0L)
+  expect_equal(c$blocks[[1]]$individual_rank_drop, 2L)
+  expect_equal(c$blocks[[1]]$individual$full, matrix(0, 4, 2))
+  expect_equal(c$blocks[[1]]$individual_true_span_leakage, 0)
+})

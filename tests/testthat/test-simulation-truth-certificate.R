@@ -113,3 +113,16 @@ test_that("zero, saturated, single-block and feasible boundary ranks certify", {
                      args$joint_rank)
   }
 })
+test_that("invalid real-matrix and oversized-rank truth contracts fail structurally", {
+  sim <- simulate_blocks(n = 12, pks = c(6, 6), joint_rank = 1,
+                         individual_ranks = c(1, 1), seed = 42)
+  bad <- sim
+  bad$blocks[[1]] <- bad$blocks[[1]] + 0i
+  expect_error(.certify_simulated_truth(bad), class = "rajiveplus_invalid_simulation")
+  bad <- sim
+  bad$truth$joint_rank <- 2^40
+  expect_error(.certify_simulated_truth(bad), class = "rajiveplus_invalid_simulation")
+  expect_error(.certify_simulated_truth(sim, geometry_tolerance = 1i),
+               class = "rajiveplus_invalid_simulation")
+})
+
