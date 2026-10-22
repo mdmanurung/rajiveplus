@@ -1,0 +1,83 @@
+{
+  "scope": "CORRECTNESS_AND_DESIGN_ONLY",
+  "software": "NOT_READY",
+  "manuscript": "NOT_READY",
+  "records": [
+    {
+      "name": "simulator_red_verified",
+      "status": "FAIL",
+      "source_commit": "bf823cd35706ef15521c6806a4256d3321390178",
+      "tracked_source_stable": true,
+      "wall_time_s": 2.8753667309999855,
+      "peak_rss_kib": 286908,
+      "fail": 57,
+      "warn": 0,
+      "skip": 0,
+      "pass": 20
+    },
+    {
+      "name": "stage1_final_targeted",
+      "status": "PASS",
+      "source_commit": "38a72db4e4c2d4464214b070977365cf1ee44b68",
+      "tracked_source_stable": true,
+      "wall_time_s": 5.267945963000329,
+      "peak_rss_kib": 294500,
+      "fail": 0,
+      "warn": 0,
+      "skip": 0,
+      "pass": 268
+    },
+    {
+      "name": "package_final_reduced",
+      "status": "PASS",
+      "source_commit": "27557df38f08d362bb1c23d24e3308fb8784387c",
+      "tracked_source_stable": true,
+      "wall_time_s": 342.6526378860003,
+      "peak_rss_kib": 554200,
+      "fail": 0,
+      "warn": 0,
+      "skip": 18,
+      "pass": 1448
+    },
+    {
+      "name": "paper_final_pytest",
+      "status": "PASS",
+      "source_commit": "ef5eb8ef07eb6a442cb138d84c2d6f2fba830eb2",
+      "tracked_source_stable": true,
+      "wall_time_s": 4.952972262999992,
+      "peak_rss_kib": 521292
+    },
+    {
+      "name": "eight_arm_smoke_final",
+      "status": "PASS",
+      "source_commit": "ef5eb8ef07eb6a442cb138d84c2d6f2fba830eb2",
+      "tracked_source_stable": true,
+      "wall_time_s": 2.233511364000151,
+      "peak_rss_kib": 287988
+    },
+    {
+      "name": "wedin_portable_arithmetic",
+      "status": "PASS",
+      "source_commit": "38a72db4e4c2d4464214b070977365cf1ee44b68",
+      "tracked_source_stable": true,
+      "wall_time_s": 0.2595341700002791,
+      "peak_rss_kib": 154592
+    },
+    {
+      "name": "stage1_open_geometry_gate",
+      "status": "FAIL",
+      "source_commit": "38a72db4e4c2d4464214b070977365cf1ee44b68",
+      "tracked_source_stable": true,
+      "wall_time_s": 17.344472504999885,
+      "peak_rss_kib": 279692,
+      "fail": 2,
+      "warn": 0,
+      "skip": 0,
+      "pass": 1
+    }
+  ],
+  "paper_pytest": {
+    "passed": 45
+  },
+  "memory_qualification": "maximum-child RSS, not summed process-tree peak"
+}
