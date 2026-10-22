@@ -2,6 +2,17 @@
 
 ## Scientific corrections
 
+### Preprocessing policy is recorded and uncentred blocks are detected (defect S1)
+
+The estimator applies no centering or scaling; that policy is now recorded in
+every method profile (`preprocessing_centering` / `preprocessing_scaling`).
+`Rajive()` warns (class `rajiveplus_uncentered_blocks`, naming the block)
+when a block's column-mean offset carries more than half of the block's
+total variance -- a scale-free criterion that centred data (share near 1/n)
+and forgotten-centreing data (share near 1) separate by orders of magnitude.
+No data is modified and no threshold changes. See
+`validation/2026-10-22-stage2-preprocessing/README.md`.
+
 ### Default estimator adopts orthonormal geometry (RJP-BASE v2; defects G1/G2)
 
 The default estimator now enforces the AJIVE geometry contract that score

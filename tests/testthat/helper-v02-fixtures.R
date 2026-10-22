@@ -64,6 +64,11 @@ make_small_rajive_fixture <- function(seed = 7001L) {
   set.seed(seed)
   Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(1, 1),
                       n = 12, pks = c(8, 6), dist.type = 1)
+  # Column-centre the legacy generator output: Rajive() documents (and now
+  # warns on) uncentred blocks, and this fixture serves association/profile
+  # tests, not preprocessing stress. Defect S1 contract.
+  Y$sim_data <- lapply(Y$sim_data, function(x)
+    sweep(x, 2L, colMeans(x), `-`))
   fit <- Rajive(Y$sim_data, c(2L, 2L),
                 joint_rank = 1L,
                 n_wedin_samples = NA,

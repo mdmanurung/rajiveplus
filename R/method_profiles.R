@@ -5,6 +5,8 @@
       status = "default_orthonormal_constrained",
       config = list(
         block_factorization = "sequential_robust_svd_cpp",
+        preprocessing_centering = "none_user_responsibility",
+        preprocessing_scaling = "none_user_responsibility",
         basis_extraction_tolerance = "dimension_scaled_machine_epsilon",
         aggregation_statistic = "orthonormal_stacked_factor_squared_amplitudes",
         wedin_target = "robust_block_signal_perturbation",
@@ -24,6 +26,8 @@
       status = "benchmark_only",
       config = list(
         block_factorization = "upstream_sequential_robust_svd_unpinned",
+        preprocessing_centering = "none_user_responsibility",
+        preprocessing_scaling = "none_user_responsibility",
         basis_extraction_tolerance = "none_raw_robust_factors",
         aggregation_statistic = "upstream_robust_stacked_factor",
         wedin_target = "upstream_unverified",
@@ -43,6 +47,8 @@
       status = "internal_candidate",
       config = list(
         block_factorization = "sequential_robust_svd_cpp",
+        preprocessing_centering = "none_user_responsibility",
+        preprocessing_scaling = "none_user_responsibility",
         basis_extraction_tolerance = "dimension_scaled_machine_epsilon",
         aggregation_statistic = "eigendecomposition_sum_block_projectors",
         wedin_target = "candidate_requires_matched_reference",
@@ -62,6 +68,8 @@
       status = "simulation_calibrated_declared_missingness_v1",
       config = list(
         block_factorization = "weighted_robust_svd_with_completion",
+        preprocessing_centering = "optional_missing_control_default_off",
+        preprocessing_scaling = "optional_missing_control_default_off",
         basis_extraction_tolerance = "none_raw_weighted_factors",
         aggregation_statistic = "robust_stacked_completed_signal_factors",
         wedin_target = "not_used_for_fixed_native_rank",

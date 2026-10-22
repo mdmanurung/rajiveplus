@@ -246,6 +246,11 @@
 #' joint-rank estimate and loadings in proportion to the raw scale
 #' differences (JIVE convention; see Lock et al. 2013,
 #' \emph{Ann. Appl. Statist.} 7(1):523--542).
+#' The estimator itself applies neither; the active policy is recorded in the
+#' method profile (\code{preprocessing_centering} /
+#' \code{preprocessing_scaling}). Blocks whose column-mean offset carries
+#' more than half of the block's total variance trigger a documented warning
+#' (class \code{rajiveplus_uncentered_blocks}) naming the offending blocks.
 #'
 #' @section Permutation and paired designs:
 #' When \code{n_perm_samples} is supplied, the joint-rank threshold is

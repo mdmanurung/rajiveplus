@@ -242,11 +242,52 @@
   })
   names(fitted_blocks) <- names(blocks)
 
+  .warn_uncentered_blocks(fitted_blocks)
+
   list(
     blocks = fitted_blocks,
     original_blocks = original_blocks,
     feature_map = feature_map
   )
+}
+
+# Defect S1: the estimator neither centres nor scales; the user is responsible
+# (see the method-profile `preprocessing_*` fields). A forgotten centreing
+# silently corrupts the joint-rank estimate, so clearly uncentred blocks are
+# detected and reported. The criterion is scale-free: the share of a block's
+# total variance that is column-mean offset. Centred data sits near 1/n
+# (sampling noise); a forgotten centreing on all-positive data approaches 1.
+# The 0.5 cutoff separates these regimes by orders of magnitude.
+.warn_uncentered_blocks <- function(blocks) {
+  offending <- character(0L)
+  shares <- numeric(length(blocks))
+  for (k in seq_along(blocks)) {
+    x <- blocks[[k]]
+    col_means <- colMeans(x)
+    col_vars <- apply(x, 2L, stats::var)
+    total_ss <- sum(col_means^2) + sum(col_vars)
+    if (!is.finite(total_ss) || total_ss <= 0) {
+      next
+    }
+    shares[[k]] <- sum(col_means^2) / total_ss
+    if (shares[[k]] > 0.5) {
+      label <- names(blocks)[[k]]
+      if (is.na(label) || !nzchar(label)) label <- sprintf("block %d", k)
+      offending <- c(offending, label)
+    }
+  }
+  if (length(offending)) {
+    cli::cli_warn(
+      c(
+        "The following data block(s) appear not column-centred: {.val {offending}}.",
+        "i" = paste0("{.fn Rajive} expects column-centred blocks; centre (and ",
+                     "consider scaling) before fitting or the joint-rank ",
+                     "estimate can be silently wrong.")
+      ),
+      class = "rajiveplus_uncentered_blocks"
+    )
+  }
+  invisible(shares)
 }
 
 .restore_component_features <- function(block_decomps, original_blocks,
