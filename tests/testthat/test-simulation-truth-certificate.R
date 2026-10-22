@@ -35,7 +35,8 @@ test_that("infeasible feature and common-Individual ranks are rejected before RN
     before <- .Random.seed
     expect_error(do.call(simulate_blocks, c(args, list(seed = 99L))),
                  class = "rajiveplus_invalid_input")
-    expect_identical(.Random.seed, before)
+    expect_true(identical(.Random.seed, before),
+                info = "infeasible input must fail before consuming RNG")
   }
 })
 
