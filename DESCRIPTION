@@ -24,7 +24,7 @@ Authors@R: c(
 Description: Implements the Robust Angle-based Joint and Individual Variation
     Explained (RAJIVE) estimator for matched multi-view data, extending the
     original RaJIVE method of Ponzi et al. (2021)
-    <https://doi.org/10.48550/arXiv.2101.09110>. Provides robust singular value
+    <doi:10.48550/arXiv.2101.09110>. Provides robust singular value
     decomposition, joint and individual component estimation, diagnostic
     visualization, feature-level jackstraw-style testing, metadata association,
     and stability summaries. Native missing-data fitting and fixed-score
@@ -56,8 +56,7 @@ Suggests:
     qvalue,
     tibble,
     tidyr,
-    jsonlite,
-    withr
+    jsonlite
 VignetteBuilder: knitr
 Imports: ggplot2,
     doParallel,

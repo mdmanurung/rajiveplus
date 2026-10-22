@@ -41,7 +41,7 @@ bibentry(
 
 bibentry(
   bibtype = "Article",
-  title = "Joint and individual variation explained",
+  title = "Joint and individual variation explained (JIVE) for integrated analysis of multiple data types",
   author = c(person("Eric", "Lock"),
             person("Keith", "Hoadley"),
             person("James", "Marron"),
@@ -51,5 +51,5 @@ bibentry(
   number = "1",
   pages = "523--542",
   year = "2013",
-  doi = "10.1214/12-AOAS708"
+  doi = "10.1214/12-AOAS597"
 )
