@@ -639,13 +639,37 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
   n_obs <- dim(blocks[[1]])[1]
 
   # SVD of the signal scores matrix -----------------------------------------
+  # Defect G1 fix: AJIVE geometry treats the per-block score matrices as
+  # orthonormal bases of the estimated signal subspaces. The robust SVD does
+  # not guarantee orthonormality of its retained factors, so each retained
+  # block basis is re-orthonormalized with a rank-revealing pass before
+  # stacking. Rank-deficient bases are truncated with a warning and the stack
+  # capacity follows the achieved ranks.
   signal_scores <- list()
+  block_basis_ranks <- integer(K)
   for(k in 1:K){
-    signal_scores[[k]] <- block_svd[[k]][['u']][, 1:initial_signal_ranks[k], drop = FALSE]
+    U <- block_svd[[k]][['u']][, 1:initial_signal_ranks[k], drop = FALSE]
+    Q <- .rank_revealing_basis(U)
+    block_basis_ranks[k] <- ncol(Q)
+    if(block_basis_ranks[k] < initial_signal_ranks[k]){
+      warning(sprintf(paste0("Block %d: the retained robust score basis is ",
+                             "numerically rank deficient (%d of %d directions ",
+                             "retained after orthonormalization)."),
+                      k, block_basis_ranks[k], initial_signal_ranks[k]),
+              call. = FALSE, immediate. = TRUE)
+    }
+    signal_scores[[k]] <- Q
+  }
+
+  if(min(block_basis_ranks) == 0L){
+    cli::cli_abort(
+      "All retained block score bases are numerically rank deficient; the joint fit is degenerate.",
+      class = "rajiveplus_degenerate_basis"
+    )
   }
 
   M <- do.call(cbind, signal_scores)
-  M_svd <- get_svd_robustH(M, rank=min(initial_signal_ranks))
+  M_svd <- get_svd_robustH(M, rank=min(block_basis_ranks))
 
 
   # estimate joint rank with wedin bound and random direction bound -------------------------------------------------------------
@@ -757,8 +781,17 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
 
   # estimate joint score space ------------------------------------
 
+  raw_joint_scores <- M_svd[['u']][ , seq_len(joint_rank_estimate), drop=FALSE]
 
-  joint_scores <- M_svd[['u']][ , seq_len(joint_rank_estimate), drop=FALSE]
+  # Defect G1 fix (continued): the stacked aggregation does not guarantee that
+  # its selected factors are orthonormal either. Canonicalise the selected
+  # joint basis before the identifiability filter, because the filter's
+  # projection norms and the downstream projector I - Q Q' both assume an
+  # orthonormal Q. For orthonormal block bases the squared singular values of
+  # the stack equal the eigenvalues of the summed block projectors, so the
+  # rank-selection statistic is unchanged in meaning.
+  joint_scores <- .rank_revealing_basis(raw_joint_scores)
+  canonical_rank_drop <- joint_rank_estimate - ncol(joint_scores)
 
   # reconsider joint score space ------------------------------------
   # remove columns of joint_scores that have a
@@ -770,11 +803,12 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
     sv_thresholds = sv_thresholds,
     identifiability_norm = identifiability_norm
   )
-  to_keep <- setdiff(seq_len(joint_rank_estimate), to_remove)
+  to_keep <- setdiff(seq_len(ncol(joint_scores)), to_remove)
   joint_rank <- length(to_keep)
   joint_scores <- joint_scores[ , to_keep, drop=FALSE]
 
   rank_sel_results[['identif_dropped']] <- to_remove
+  rank_sel_results[['canonical_rank_drop']] <- canonical_rank_drop
 
   list(joint_scores=joint_scores, rank_sel_results=rank_sel_results)
 }
@@ -810,17 +844,32 @@ get_final_decomposition_robustH <- function(X, joint_scores, sv_threshold, full=
 
 #' Computes the individual matrix for a data block.
 #'
+#' The retained robust factors of the joint-complement residual are rank-frozen,
+#' projected onto the joint complement, and refactorized with an exact algebraic
+#' SVD (no second robust fit), so the Individual component cannot leak joint
+#' variation (defect G2).
+#'
 #' @param X Matrix. The original data matrix.
 #' @param joint_scores Matrix. The basis of the joint space (dimension n x joint_rank).
 #' @param sv_threshold Numeric vector. The singular value thresholds from the initial signal rank estimates.
 #' @param full Boolean. Do we compute the full J, I matrices or just the SVD (set to FALSE to save memory).
+#' @param constraint Character. \code{"joint_complement"} (default) projects the
+#'   selected reconstruction onto the joint complement before refactorization;
+#'   \code{"none"} keeps the legacy unconstrained robust refit (experimental
+#'   ablation adapter only).
 
-get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, full=TRUE){
+get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold,
+                                                 full=TRUE,
+                                                 constraint = c("joint_complement",
+                                                                "none")){
+
+  constraint <- match.arg(constraint)
 
   # When joint_rank == 0 (after identifiability filtering), there is no
   # joint subspace to project out: X_orthog == X.  Avoid forming an empty
   # n x 0 / 0 x n product and the n x n identity.
-  if (is.null(joint_scores) || ncol(joint_scores) == 0L) {
+  no_joint <- is.null(joint_scores) || ncol(joint_scores) == 0L
+  if (no_joint) {
     X_orthog <- X
   } else {
     # Avoid building the full n x n projector: I - U U^T applied to X is
@@ -832,6 +881,30 @@ get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, 
   indiv_rank <- sum(indiv_decomposition[['d']] > sv_threshold)
   indiv_decomposition <- truncate_svd(decomposition=indiv_decomposition,
                                       rank=indiv_rank)
+
+  # Defect G2 fix: the robust refit of the joint-complement residual is not
+  # itself constrained to the complement, so joint variation can leak back
+  # into the Individual component. Freeze the selected rank first, project the
+  # selected reconstruction onto the joint complement, and refactorize with an
+  # exact algebraic SVD -- no second robust fit. `constraint = "none"` keeps
+  # the legacy unconstrained refit for the experimental ablation adapter.
+  if (!no_joint && constraint == "joint_complement") {
+    selected_full <- svd_reconstruction(indiv_decomposition)
+    projected <- selected_full -
+      joint_scores %*% (t(joint_scores) %*% selected_full)
+    refit <- svd(projected, nu = min(dim(projected)), nv = min(dim(projected)))
+    # Scale to the preconstraint matrix as well: an exactly removed fit must
+    # not acquire a spurious rank by normalizing roundoff to its own tiny norm.
+    tolerance <- max(dim(projected)) * .Machine$double.eps *
+      max(max(indiv_decomposition[['d']], 0), max(refit$d, 0))
+    indiv_rank <- min(indiv_rank, sum(refit$d > tolerance))
+    indiv_decomposition <- list(
+      u = refit$u[, seq_len(indiv_rank), drop = FALSE],
+      d = refit$d[seq_len(indiv_rank)],
+      v = refit$v[, seq_len(indiv_rank), drop = FALSE]
+    )
+  }
+
   if(full){
     indiv_decomposition[['full']] <- svd_reconstruction(indiv_decomposition)
   } else{

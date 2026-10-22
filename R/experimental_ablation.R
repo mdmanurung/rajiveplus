@@ -2,10 +2,10 @@
 # Inputs are already preprocessed; no centering, scaling, imputation or threshold
 # calibration is performed here. Statistical use requires a separate protocol.
 .ablation_basis <- function(x) {
-  if (!ncol(x)) return(matrix(numeric(), nrow(x), 0L))
-  s <- svd(x, nu = min(dim(x)), nv = 0L)
-  tolerance <- max(dim(x)) * .Machine$double.eps * max(s$d, 0)
-  s$u[, seq_len(sum(s$d > tolerance)), drop = FALSE]
+  # Delegates to the shared rank-revealing orthonormalization now used by the
+  # default estimator (RJP-BASE v2); the adapter keeps its own name so the
+  # frozen stage-1 harness code stays readable.
+  .rank_revealing_basis(x)
 }
 
 .ablation_prepare <- function(blocks, initial_ranks, seed = 1L) {
@@ -79,11 +79,15 @@
 }
 
 .ablation_select_individual <- function(cache, geometry, seed = 3L) {
-  # This preselected fit is shared by the I pair. The original raw-score
-  # residualization is preserved, including its nonprojector behavior.
+  # This preselected fit is shared by the I pair. The legacy raw-score
+  # residualization is preserved, including its nonprojector behavior:
+  # `constraint = "none"` keeps the unconstrained robust refit so the
+  # experimental original/constrained contrast stays meaningful after the
+  # default estimator adopted the constrained refactorization (RJP-BASE v2).
   .with_validation_rng(seed, lapply(seq_along(cache$blocks), function(k) {
     get_individual_decomposition_robustH(
-      cache$blocks[[k]], geometry$joint_scores, cache$sv_thresholds[k], full = TRUE
+      cache$blocks[[k]], geometry$joint_scores, cache$sv_thresholds[k],
+      full = TRUE, constraint = "none"
     )
   }))
 }

@@ -1,27 +1,18 @@
-# Defects G1 and G2: the shipped default does not satisfy the geometry the rest
-# of the pipeline assumes.
+# Defects G1 and G2: the shipped default must satisfy the geometry the rest of
+# the pipeline assumes.
 #
-# `RJP-BASE` declares `basis_extraction_tolerance = "none_raw_robust_factors"`,
-# so per-block robust score bases are used as-is. AJIVE treats score matrices as
-# orthonormal subspace bases, and the Individual Component is obtained by
+# `RJP-BASE` v1 declared `basis_extraction_tolerance = "none_raw_robust_factors"`,
+# so per-block robust score bases were used as-is. AJIVE treats score matrices as
+# orthonormal subspace bases, and the Individual Component was obtained by
 # projecting into the joint complement and then refitting without constraint, so
-# joint variation leaks back in.
+# joint variation leaked back in.
 #
-# These tests state the contract and assert the target, so they fail on the
-# current default. They are the executable form of the open scientific gate and
-# must not be relaxed to make the suite green.
-#
-# They are gated behind RAJIVE_RUN_GEOMETRY_GATE=1 rather than left permanently
-# red, so that an open scientific question does not mask unrelated regressions.
-# `audits/DEFECT_REGISTER.md` rows G1 and G2 track them. Promote them to the
-# default suite in the same change that fixes the geometry.
-
-skip_if_not_geometry_gate <- function() {
-  skip_if_not(
-    identical(Sys.getenv("RAJIVE_RUN_GEOMETRY_GATE"), "1"),
-    "set RAJIVE_RUN_GEOMETRY_GATE=1 to run the open geometry gate"
-  )
-}
+# Fixed in the default estimator (RJP-BASE v2, ADR 0005): per-block robust score
+# bases and the selected joint basis are rank-revealingly orthonormalized, and
+# the Individual Component is the selected robust reconstruction projected onto
+# the joint complement and refactorized with an exact algebraic SVD (rank frozen
+# before the constraint, no second robust fit). These tests state the contract
+# and run in the default suite; they must not be relaxed or re-gated.
 
 geometry_fixture <- function(seed = 6161L) {
   sim <- simulate_blocks(n = 60L, pks = c(50L, 40L, 30L),
@@ -34,7 +25,6 @@ geometry_fixture <- function(seed = 6161L) {
 }
 
 test_that("per-block robust score bases are orthonormal", {
-  skip_if_not_geometry_gate()
   fx <- geometry_fixture()
   K <- length(fx$blocks)
 
@@ -61,7 +51,6 @@ test_that("per-block robust score bases are orthonormal", {
 })
 
 test_that("the Individual Component does not leak into the joint space", {
-  skip_if_not_geometry_gate()
   fx <- geometry_fixture()
   Q <- fx$fit$joint_scores
   skip_if(ncol(Q) == 0L, "fixture produced a zero-column joint basis")
@@ -81,9 +70,6 @@ test_that("the Individual Component does not leak into the joint space", {
 })
 
 test_that("the joint score basis itself is orthonormal", {
-  # This one currently holds, and is pinned so that any future canonicalisation
-  # or refactor cannot silently break it.
-  skip_if_not_geometry_gate()
   fx <- geometry_fixture()
   Q <- fx$fit$joint_scores
   skip_if(ncol(Q) == 0L, "fixture produced a zero-column joint basis")

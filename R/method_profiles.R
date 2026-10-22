@@ -1,20 +1,20 @@
 .method_profile_manifest <- function() {
   list(
     `RJP-BASE` = list(
-      version = 1L,
-      status = "frozen_local_baseline",
+      version = 2L,
+      status = "default_orthonormal_constrained",
       config = list(
         block_factorization = "sequential_robust_svd_cpp",
-        basis_extraction_tolerance = "none_raw_robust_factors",
-        aggregation_statistic = "robust_stacked_factor_squared_amplitudes",
+        basis_extraction_tolerance = "dimension_scaled_machine_epsilon",
+        aggregation_statistic = "orthonormal_stacked_factor_squared_amplitudes",
         wedin_target = "robust_block_signal_perturbation",
         wedin_sampler = "projected_gaussian_qr_frame",
         wedin_denominator = "robust_block_amplitude_at_requested_rank",
         random_permutation_statistic = "leading_stacked_score_squared_amplitude",
         threshold_rule = "max_available_wedin_random_permutation",
         identifiability_norm = "l2",
-        individual_constraint = "project_input_to_joint_complement",
-        individual_refactorization = "unconstrained_robust_refit",
+        individual_constraint = "exact_joint_complement_reprojection",
+        individual_refactorization = "algebraic_svd_only",
         robust_scale_policy = "iterationwise_mad",
         fallback_behavior = "weighted_fit_may_fallback_to_classical_svd"
       )

@@ -2,6 +2,26 @@
 
 ## Scientific corrections
 
+### Default estimator adopts orthonormal geometry (RJP-BASE v2; defects G1/G2)
+
+The default estimator now enforces the AJIVE geometry contract that score
+matrices are orthonormal subspace bases. Per-block robust score bases and the
+selected joint factors are orthonormalized by a rank-revealing SVD pass
+(tolerance `max(dim) * .Machine$double.eps * max(singular values)`), with
+rank-deficient bases truncated and warned; the pre-filter joint
+canonicalization drop is recorded as `canonical_rank_drop` in
+`joint_rank_sel`. The Individual Component is now the selected robust
+reconstruction projected onto the joint complement and refactorized with an
+exact algebraic SVD (rank frozen before the constraint, no second robust
+fit); `get_individual_decomposition_robustH()` gains a `constraint` argument
+whose `"none"` value preserves the legacy unconstrained refit for the
+experimental ablation adapter. On the standard three-block fixture the worst
+block Gram error falls from 7.3e-2 to machine precision and the worst
+Individual fitted-span leakage from 1.6e-2 to below 1e-16; the three geometry
+tests now run in the default suite. Fits are bit-different from the previous
+default. See `docs/adr/0005-default-orthonormal-geometry.md`. The Wedin bound
+remains diagnostic-only and no threshold formula changes.
+
 ### Stage-1 simulator truth certification (estimator unchanged)
 
 `simulate_blocks()` now rejects insufficient combined feature-rank capacity

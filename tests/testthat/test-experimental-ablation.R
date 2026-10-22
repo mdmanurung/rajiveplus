@@ -6,12 +6,17 @@ ablation_fixture <- function() {
   )
 }
 
-test_that("raw robust geometry and original refit reproduce the frozen path", {
+test_that("orthonormal robust geometry and constrained refit reproduce the default path", {
+  # Purpose (unchanged): the experimental adapter must faithfully reproduce the
+  # shipped default path so ablation results transfer to it. Since RJP-BASE v2
+  # adopted the orthonormal/constrained semantics, the arm that reproduces the
+  # default is orthonormal representation + robust aggregation + constrained
+  # refit; the raw/unconstrained arms are now legacy-only contrasts.
   sim <- ablation_fixture()
   cache <- .ablation_prepare(sim$noisy, c(3, 3, 3), seed = 11)
   set.seed(45)
   rng <- .Random.seed
-  geometry <- .ablation_geometry(cache, 2, "raw", "robust", seed = 12)
+  geometry <- .ablation_geometry(cache, 2, "orthonormal", "robust", seed = 12)
   reference <- .with_validation_rng(12, get_joint_scores_robustH(
     cache$blocks, cache$block_fits, cache$initial_ranks, cache$sv_thresholds,
     joint_rank = 2, identifiability_norm = "l2"
@@ -19,13 +24,22 @@ test_that("raw robust geometry and original refit reproduce the frozen path", {
   expect_equal(geometry$joint_scores, reference$joint_scores, tolerance = 1e-12)
   expect_equal(geometry$identif_dropped, reference$rank_sel_results$identif_dropped)
   selected <- .ablation_select_individual(cache, geometry, 13)
-  result <- .ablation_finish(cache, geometry, "original", 13, selected)
+  result <- .ablation_finish(cache, geometry, "constrained", 13, selected)
   for (k in seq_along(cache$blocks)) {
     baseline <- .with_validation_rng(13, get_final_decomposition_robustH(
       cache$blocks[[k]], geometry$joint_scores, cache$sv_thresholds[k], TRUE
     ))
     expect_equal(result$blocks[[k]]$joint, baseline$joint, tolerance = 1e-12)
-    expect_equal(result$blocks[[k]]$individual, baseline$individual, tolerance = 1e-12)
+    # The frozen adapter records `constraint_rank_tolerance` alongside the
+    # schema fields and orders them differently; compare the mathematical
+    # content field by field.
+    ind <- result$blocks[[k]]$individual
+    base_ind <- baseline$individual
+    expect_equal(ind$u, base_ind$u, tolerance = 1e-12)
+    expect_equal(ind$d, base_ind$d, tolerance = 1e-12)
+    expect_equal(ind$v, base_ind$v, tolerance = 1e-12)
+    expect_equal(ind$full, base_ind$full, tolerance = 1e-12)
+    expect_identical(ind$rank, base_ind$rank)
     expect_equal(result$blocks[[k]]$residual, baseline$residual, tolerance = 1e-12)
   }
   expect_identical(.Random.seed, rng)

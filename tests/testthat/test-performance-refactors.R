@@ -134,19 +134,26 @@ test_that("PERF-002 null F-stat generation is faster than frozen implementation"
 })
 
 test_that("PERF-003 fixed-rank bootstrap is treated as opt-in non-equivalent strategy", {
-  set.seed(1408)
+  # Seed moved 1408 -> 1409 (bootstrap RNG 1409 -> 1418): the RJP-BASE v2
+  # orthonormal geometry (ADR 0005) shifted this fixture's borderline joint
+  # component across the identifiability filter (block-1 score 21.87 vs
+  # threshold 21.91), so the reference fit now correctly estimates
+  # joint_rank = 0 and has no joint score payload to bootstrap. The test's
+  # purpose is fixed-rank bootstrap determinism, which needs a reference fit
+  # with at least one joint component; seed 1409 provides one stably.
+  set.seed(1409)
   Y <- ajive.data.sim(K = 2, rankJ = 1, rankA = c(3, 3), n = 35,
                       pks = c(18, 16), dist.type = 1)
   fit <- Rajive(Y$sim_data, c(3, 3), n_wedin_samples = 10,
                 n_rand_dir_samples = 10)
 
-  set.seed(1409)
+  set.seed(1418)
   fixed_a <- rajiveplus:::.rajive_bootstrap(
     fit, Y$sim_data, c(3, 3), B = 3L, keep = "loadings",
     n_wedin_samples = 10, n_rand_dir_samples = 10,
     joint_rank = fit$joint_rank
   )
-  set.seed(1409)
+  set.seed(1418)
   fixed_b <- rajiveplus:::.rajive_bootstrap(
     fit, Y$sim_data, c(3, 3), B = 3L, keep = "loadings",
     n_wedin_samples = 10, n_rand_dir_samples = 10,

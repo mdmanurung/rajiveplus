@@ -2044,7 +2044,14 @@ diagnose_missing_ranks <- function(blocks,
   mask <- fit$missing$mask
   missing_blocks <- Reduce(`+`, lapply(mask, function(m) rowSums(m) == 0L))
   for (j in seq_len(r)) {
-    score_mat <- do.call(cbind, lapply(refits, function(x) x$joint_scores[, j]))
+    # A refit may legitimately retain fewer joint components than the
+    # reference fit (its own identifiability filter can drop a borderline
+    # component). Such refits contribute NA for that component rather than
+    # crashing; the resulting NA sd honestly flags the instability.
+    score_mat <- do.call(cbind, lapply(refits, function(x) {
+      if (ncol(x$joint_scores) >= j) x$joint_scores[, j]
+      else rep(NA_real_, nrow(fit$joint_scores))
+    }))
     rows[[j]] <- data.frame(
       sample = seq_len(nrow(score_mat)),
       component = j,

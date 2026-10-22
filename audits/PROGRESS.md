@@ -7,6 +7,16 @@ and [archive/progress-pre-consolidation-2026-05-13.md](archive/progress-pre-cons
 
 ## Current bounded stage — 2026-10-22
 
+**Update (stage-2, 2026-10-22):** the geometry gate is closed. The default
+estimator adopted the stage-1 validated orthonormal/constrained semantics
+(RJP-BASE v2, ADR 0005): worst block Gram error 1.11e-15 (target <=1e-10),
+worst Individual fitted-span leakage 8.14e-17 (target <=1e-8). The three
+geometry tests now run un-gated in the default suite; the reduced suite is
+1,463 passed / 0 failed / 0 warnings / 15 expected skips. Receipt:
+[validation/2026-10-22-stage2-geometry/README.md](../validation/2026-10-22-stage2-geometry/README.md).
+The historical "gate still fails" statements below describe the pre-fix
+source and are kept as history.
+
 **Software and manuscript: NOT_READY.** Local-only work starts from PR #9
 head `8ceabeedea6501a15b10158e40ad8cebd904ec11`; master diverges and has
 not been merged. Package remains 0.1.0. No push, PR, tag, release, clinical

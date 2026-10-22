@@ -8,7 +8,8 @@ get_individual_decomposition_robustH(
   X,
   joint_scores,
   sv_threshold,
-  full = TRUE
+  full = TRUE,
+  constraint = c("joint_complement", "none")
 )
 }
 \arguments{
@@ -19,7 +20,15 @@ get_individual_decomposition_robustH(
 \item{sv_threshold}{Numeric vector. The singular value thresholds from the initial signal rank estimates.}
 
 \item{full}{Boolean. Do we compute the full J, I matrices or just the SVD (set to FALSE to save memory).}
+
+\item{constraint}{Character. \code{"joint_complement"} (default) projects the
+selected reconstruction onto the joint complement before refactorization;
+\code{"none"} keeps the legacy unconstrained robust refit (experimental
+ablation adapter only).}
 }
 \description{
-Computes the individual matrix for a data block.
+The retained robust factors of the joint-complement residual are rank-frozen,
+projected onto the joint complement, and refactorized with an exact algebraic
+SVD (no second robust fit), so the Individual component cannot leak joint
+variation (defect G2).
 }

@@ -99,6 +99,25 @@ svd_reconstruction <- function(decomposition){
 
 }
 
+#' Rank-revealing orthonormal basis of the column space of a matrix.
+#'
+#' Returns an orthonormal basis (to machine precision) of the column space of
+#' \code{x}, dropping numerically rank-deficient directions. This enforces the
+#' AJIVE geometry contract that score matrices are orthonormal subspace
+#' bases -- a contract the robust SVD does not guarantee for its retained
+#' factors (defects G1/G2; see \code{docs/adr/0005-default-orthonormal-geometry.md}).
+#'
+#' @param x Matrix. May have zero columns.
+#'
+#' @return Matrix with \code{nrow(x)} rows and \code{rank(x)} orthonormal columns.
+#' @noRd
+.rank_revealing_basis <- function(x) {
+  if (!ncol(x)) return(matrix(numeric(), nrow(x), 0L))
+  s <- svd(x, nu = min(dim(x)), nv = 0L)
+  tolerance <- max(dim(x)) * .Machine$double.eps * max(s$d, 0)
+  s$u[, seq_len(sum(s$d > tolerance)), drop = FALSE]
+}
+
 #' Gets the wedin bounds
 #'
 #' @param X Matrix. The data matrix.

@@ -19,7 +19,10 @@ described below. Historical pilot/calibration values remain historical and
 are not new measurements at this source. See
 [the stage-0 receipt index](validation/2026-10-22-stage0/README.md).
 Current evidence confirms V1/V2 red-first and repairs reporting only; G1/G2
-remain open. Public-generator capacity/intersection defects B2/B3 mean its
+were fixed on 2026-10-22 by promoting the stage-1 validated ablation semantics
+to the default estimator (RJP-BASE v2, ADR 0005; see
+[the stage-2 geometry receipt](../validation/2026-10-22-stage2-geometry/README.md)).
+Public-generator capacity/intersection defects B2/B3 mean its
 truth must be independently certified before calibration. No v1.0.0 or
 manuscript readiness is established.
 
@@ -30,7 +33,8 @@ SVD-based truth certification; see
 [stage-1 evidence](validation/2026-10-22-stage1/README.md).
 The raw/robust/original eight-arm smoke matches public baseline matrices.
 Experimental invariants are not promotion evidence. Default G1/G2 failures
-remain unchanged. A separate two-column smoke also disproves the broad X2
+were fixed on 2026-10-22 (RJP-BASE v2, ADR 0005). A separate two-column smoke
+also disproves the broad X2
 refutation: final robust Joint scores are not guaranteed orthonormal.
 
 The pinned-source Wedin derivation is complete at the classical/conditional
@@ -49,8 +53,8 @@ per-block-quantile reduction is not equivalent. See
 | W4 | Rank selection | The across-block Wedin combination rule `K - sum(per-block bounds)` is nearly a constant: with `K = 3` and per-block bounds around 0.08 the threshold sits at roughly 2.8 regardless of the data, while the observed squared stacked amplitudes lie between about 1.6 and 2.9. It therefore rejects true joint ranks 1 and 2 outright. Correcting W1 made this reachable and cost 87% of recoverable signal at true rank 1, so the arithmetic fix and the combination rule had to be separated. | `RAJIVE_RUN_SLOW=1 tests/testthat/test-calibration-joint-rank.R`; bounds probe over true ranks 0-3 | before the W1 fix: `overall = rand_dir = 1.7884`, Wedin inert; after: `overall = wedin = 2.75`, true=1 exact recovery 1.00 to 0.13 | a combination rule that separates true rank 0, 1 and 2 | `DEFERRED`; Wedin excluded from the default threshold and the exclusion recorded, pending the pinned reference |
 | W5 | Rank selection | The random-direction bound is data-independent: with fixed `n_obs`, `initial_signal_ranks` and `num_samples` it returned exactly `1.7884` in every scenario examined, including true ranks 0 to 3. That is correct for a null threshold, but it means the effective rule has no data-adaptive component, and its Type-I rate is not yet characterised with a proper replicate budget. | bounds probe, 24 fits across true ranks 0-3 | `1.7884` in 24 of 24 fits; pilot Type-I 0.00 at B=15 with one seed offset and 0.20 with another | characterised Type-I with a declared Monte Carlo budget | `CONFIRMED` (characterisation pending) |
 | W3 | Wedin bound | Max is valid for the common two-sided classical Wedin bound; min is invalid in general. Raw robust factors, amplitudes and resampling do not establish its premises. | `scripts/check_stage1_wedin.R`; pinned source derivation | C1-C10 pass; conditional projector/min-max proof; per-block quantiles differ from draw-level aggregation | justified robust statistic and resampling coverage | `UNVERIFIED` for robust transfer; classical max/min and conditional aggregation resolved |
-| G1 | Geometry | The shipped default `RJP-BASE` sets `basis_extraction_tolerance = "none_raw_robust_factors"`, so per-block robust score bases are not orthonormal. | `RAJIVE_RUN_GEOMETRY_GATE=1 tests/testthat/test-robust-basis-orthonormality.R` | worst `max\|U'U - I\|` = 0.0728 | `< 1e-10` | `CONFIRMED` (gated, not fixed) |
-| G2 | Geometry | The Individual Component is fit by projecting into the joint complement and then performing an unconstrained robust refit, which reintroduces joint variation. | `RAJIVE_RUN_GEOMETRY_GATE=1 tests/testthat/test-robust-basis-orthonormality.R` | worst relative `\|\|QJ'I\|\|F/\|\|I\|\|F` = 0.0158 | `< 1e-8` | `CONFIRMED` (gated, not fixed) |
+| G1 | Geometry | The shipped default `RJP-BASE` sets `basis_extraction_tolerance = "none_raw_robust_factors"`, so per-block robust score bases are not orthonormal. | `tests/testthat/test-robust-basis-orthonormality.R` (default suite) | before: worst `max\|U'U - I\|` = 0.0728; after: 1.11e-15 | `< 1e-10` | `FIXED` (RJP-BASE v2; [receipt](../validation/2026-10-22-stage2-geometry/README.md); ADR 0005) |
+| G2 | Geometry | The Individual Component is fit by projecting into the joint complement and then performing an unconstrained robust refit, which reintroduces joint variation. | `tests/testthat/test-robust-basis-orthonormality.R` (default suite) | before: worst relative `\|\|QJ'I\|\|F/\|\|I\|\|F` = 0.0158; after: 8.14e-17 | `< 1e-8` | `FIXED` (RJP-BASE v2; [receipt](../validation/2026-10-22-stage2-geometry/README.md); ADR 0005) |
 | I1 | Identifiability | The post-selection identifiability loop `break`s after the first rejected direction in each block, so a block with two unsupported directions retains one. | `tests/testthat/test-identifiability-all-rejections.R` | old logic on the same fixture: dropped `{1}`, expected `{1, 2}`; new logic drops `{1, 2}` | all unsupported directions rejected | `FIXED` |
 | R1 | Rank selection | The joint-rank rule under-selects. Re-measured on the corrected instrument (`simulate_blocks()`, exact/under/over, B=25): true rank 1 gives 0.96 exact with 0.04 under; true rank 2 gives 0.36 exact with 0.64 under. The error is entirely one-sided toward under-selection; over-selection was 0.00 in both cells. | `RAJIVE_RUN_SLOW=1 tests/testthat/test-calibration-joint-rank.R` | 0.96 at rank 1, 0.36 at rank 2 | `>= 0.80` exact | `CONFIRMED` (gate PASSES at rank 1, FAILS at rank 2) |
 | V1 | Variance | Squared robust factor values need not equal matrix energy; a plug-in `1 - Joint - Individual` is not the reconstructed Residual energy. | `tests/testthat/test-variance-single-contract.R`; stage-0 red/green receipts | Same certified actual-fit block 1: old J 0.766270123356 vs matrix 0.764127002172; old E 0.086288611819 vs matrix 0.080988684993. Repaired API agrees with feature `*_ss` / data-energy block sums; cross-term closure passes. | matrix energies on one observed-entry mask; retain distinct documented proportion denominators | `FIXED` locally, red 27 failures then green 33 actual-fit assertions; release gate remains incomplete |
