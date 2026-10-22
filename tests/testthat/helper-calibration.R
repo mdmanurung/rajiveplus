@@ -237,3 +237,46 @@ binom_ci <- function(p, B, sd_mult = 3) {
   sd <- sqrt(p * (1 - p) / B)
   c(low = p - sd_mult * sd, high = p + sd_mult * sd)
 }
+
+# ---------------------------------------------------------------------------
+# rank_recovery_summary
+# ---------------------------------------------------------------------------
+
+#' Summarise joint-rank recovery without rewarding overestimation
+#'
+#' The previous power metric scored `estimated >= true`, so selecting too many
+#' components counted as a success. That hides a real failure mode: an
+#' over-selected rank produces spurious joint components that are then carried
+#' into inference. Exact, under, and over are reported separately and every fit
+#' stays in the denominator.
+#'
+#' @param estimated Integer or numeric vector of estimated joint ranks.
+#' @param true_rank Integer. The generating joint rank.
+#'
+#' @return A list with `exact`, `under`, `over`, `mean_estimated`, `n`, and the
+#'   binomial standard error of the exact rate.
+#' @noRd
+rank_recovery_summary <- function(estimated, true_rank) {
+  estimated <- as.numeric(estimated)
+  n <- length(estimated)
+  exact <- mean(estimated == true_rank)
+  list(
+    true_rank = as.integer(true_rank),
+    exact = exact,
+    under = mean(estimated < true_rank),
+    over = mean(estimated > true_rank),
+    mean_estimated = mean(estimated),
+    n = n,
+    mc_se = sqrt(exact * (1 - exact) / n)
+  )
+}
+
+#' Format a rank-recovery summary for gate output
+#' @noRd
+format_rank_recovery <- function(summary) {
+  sprintf(
+    "true=%d exact=%.4f (mc_se=%.4f) under=%.4f over=%.4f mean_est=%.3f B=%d",
+    summary$true_rank, summary$exact, summary$mc_se, summary$under,
+    summary$over, summary$mean_estimated, summary$n
+  )
+}

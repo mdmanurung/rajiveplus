@@ -48,6 +48,42 @@
   }
 }
 
+#' Drop candidate joint directions that a Data Block barely supports
+#'
+#' A candidate joint direction is rejected when any Data Block has a trivial
+#' projection of it onto that block's features, relative to that block's signal
+#' threshold. Every block tests every candidate, so a block with several
+#' unsupported directions contributes all of them.
+#'
+#' @param blocks List of numeric Data Block matrices, samples by features.
+#' @param joint_scores Matrix whose columns are candidate joint directions.
+#' @param sv_thresholds Numeric vector of per-block signal thresholds.
+#' @param identifiability_norm One of `"l2"` or `"l1"`.
+#' @param quiet Logical; suppress the per-rejection message.
+#'
+#' @return Integer vector of rejected candidate indices, sorted and unique.
+#' @noRd
+.identifiability_filter <- function(blocks, joint_scores, sv_thresholds,
+                                    identifiability_norm, quiet = FALSE) {
+  n_candidates <- ncol(joint_scores)
+  to_remove <- integer(0L)
+
+  for (k in seq_along(blocks)) {
+    for (j in seq_len(n_candidates)) {
+      score <- t(blocks[[k]]) %*% joint_scores[, j]
+      sv <- .identifiability_projection_norm(score, identifiability_norm)
+      if (sv < sv_thresholds[[k]]) {
+        if (!quiet) {
+          message("removing column ", j)
+        }
+        to_remove <- c(to_remove, as.integer(j))
+      }
+    }
+  }
+
+  sort(unique(to_remove))
+}
+
 .match_identifiability_norm <- function(identifiability_norm) {
   tryCatch(
     match.arg(identifiability_norm, c("l2", "l1")),
@@ -58,6 +94,43 @@
       )
     }
   )
+}
+
+# The Wedin joint threshold is computed and reported, but is not part of the
+# default decision rule. The across-block combination in the frozen profile is
+# `K - sum(per-block bounds)`, which has never been verified against a pinned
+# upstream reference, and the per-block Wedin draw reduction it consumes was
+# dimensionally invalid until it was reduced to one bound per block. Measured on
+# the standard three-block fixture, the resulting threshold is nearly constant at
+# roughly 2.8 and rejects true joint ranks 1 and 2 outright, while the
+# random-direction bound separates those cases correctly at a 0/6 Type-I rate.
+# The Wedin bound therefore stays diagnostic until its combination rule is
+# re-derived; see audits/DEFECT_REGISTER.md rows W1-W3.
+.wedin_participates_in_default <- function() {
+  isTRUE(getOption("rajiveplus.wedin_in_default_threshold", FALSE))
+}
+
+.inform_wedin_diagnostic_only <- function() {
+  if (.wedin_participates_in_default()) {
+    return(invisible(NULL))
+  }
+  opt <- "rajiveplus.wedin_diagnostic_informed"
+  if (!isTRUE(getOption(opt, FALSE))) {
+    cli::cli_inform(c(
+      "i" = paste0(
+        "The Wedin bound is reported in {.field fit$joint_rank_sel$wedin} ",
+        "but is excluded from the default joint-rank threshold."
+      ),
+      "i" = paste0(
+        "Its across-block combination is unverified against a pinned upstream ",
+        "reference. Set ",
+        "{.code options(rajiveplus.wedin_in_default_threshold = TRUE)} to ",
+        "include it."
+      )
+    ))
+    options(rajiveplus.wedin_diagnostic_informed = TRUE)
+  }
+  invisible(NULL)
 }
 
 
@@ -588,20 +661,39 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
 
       # NOTE: use explicit loop (not mapply) so each block gets its own
       # signal_rank correctly, avoiding variable-capture from the outer loop.
-      block_wedin_samples <- t(do.call(rbind, lapply(seq_along(blocks), function(k)
+      #
+     # `get_wedin_bound_samples()` returns `n_wedin_samples` independent draws
+      # per block, each in [0, 1]. The across-block aggregation below consumes
+      # one bound per block, so the draws are reduced with the same 5% quantile
+      # the threshold is taken at. Reducing per draw instead summed the whole
+      # draw vector and produced a large negative "squared singular value"
+      # threshold, which made the Wedin term unreachable under
+      # `max(wedin, rand_dir, perm)`.
+      block_wedin_draws <- lapply(seq_along(blocks), function(k)
         get_wedin_bound_samples(blocks[[k]],
                                 block_svd[[k]],
                                 signal_rank=initial_signal_ranks[k],
                                 num_samples=n_wedin_samples,
-                                num_cores=num_cores))))
+                                num_cores=num_cores))
 
+      block_wedin_bounds <- vapply(block_wedin_draws, stats::quantile,
+                                  numeric(1L), probs = .05, names = FALSE)
+      block_wedin_samples <- matrix(block_wedin_bounds, nrow = 1L)
 
+      wedin_samples <- K - sum(block_wedin_bounds)
+      wedin_svsq_threshold <- wedin_samples
 
-
-      wedin_samples <-  K - colSums(block_wedin_samples)
-      wedin_svsq_threshold <- quantile(wedin_samples, .05)
+      if (!is.finite(wedin_svsq_threshold) || wedin_svsq_threshold < 0) {
+        cli::cli_abort(c(
+          "The Wedin joint-rank threshold is not a valid squared magnitude.",
+          "i" = "Got {wedin_svsq_threshold} from K = {K} block bounds.",
+          "i" = paste0("Per-block Wedin bounds: ",
+                       paste(signif(block_wedin_bounds, 4), collapse = ", "), ".")
+        ), class = "rajiveplus_wedin_threshold_invalid")
+      }
 
       rank_sel_results[['wedin']] <- list(block_wedin_samples=block_wedin_samples,
+                                          block_wedin_bounds=block_wedin_bounds,
                                           wedin_samples=wedin_samples,
                                           wedin_svsq_threshold=wedin_svsq_threshold)
     } else{
@@ -637,10 +729,22 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
                                              rand_dir_svsq_threshold = rand_dir_svsq_threshold)
     }
 
-    overall_sv_sq_threshold <- max(wedin_svsq_threshold, rand_dir_svsq_threshold,
+    if (!.wedin_participates_in_default() && is.finite(wedin_svsq_threshold)) {
+      .inform_wedin_diagnostic_only()
+      wedin_svsq_threshold_effective <- NA
+    } else {
+      wedin_svsq_threshold_effective <- wedin_svsq_threshold
+    }
+
+    overall_sv_sq_threshold <- max(wedin_svsq_threshold_effective,
+                                   rand_dir_svsq_threshold,
                                    perm_svsq_threshold, na.rm = TRUE)
     joint_rank_estimate <- sum(M_svd[['d']]^2 > overall_sv_sq_threshold)
 
+    if (!is.null(rank_sel_results[['wedin']])) {
+      rank_sel_results[['wedin']][['participates_in_threshold']] <-
+        .wedin_participates_in_default()
+    }
     rank_sel_results[['overall_sv_sq_threshold']] <- overall_sv_sq_threshold
     rank_sel_results[['joint_rank_estimate']] <- joint_rank_estimate
 
@@ -660,24 +764,17 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
   # remove columns of joint_scores that have a
   # trivial projection from one of the data matrices
 
-  to_remove <- c()
-  for(k in seq_len(K)){
-    for(j in seq_len(joint_rank_estimate)){
-      score <- t(blocks[[k]]) %*% joint_scores[ , j]
-      sv <- .identifiability_projection_norm(score, identifiability_norm)
-      if(sv < sv_thresholds[[k]]){
-        message('removing column ', j)
-        to_remove <- c(to_remove, j)
-        break
-      }
-    }
-  }
+  to_remove <- .identifiability_filter(
+    blocks = blocks,
+    joint_scores = joint_scores,
+    sv_thresholds = sv_thresholds,
+    identifiability_norm = identifiability_norm
+  )
   to_keep <- setdiff(seq_len(joint_rank_estimate), to_remove)
   joint_rank <- length(to_keep)
   joint_scores <- joint_scores[ , to_keep, drop=FALSE]
 
-  rank_sel_results[['identif_dropped']] <- if (length(to_remove) > 0L)
-    sort(unique(to_remove)) else integer(0L)
+  rank_sel_results[['identif_dropped']] <- to_remove
 
   list(joint_scores=joint_scores, rank_sel_results=rank_sel_results)
 }

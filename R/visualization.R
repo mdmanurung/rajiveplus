@@ -41,8 +41,8 @@
 #'
 #' @param ajive_output An object of class \code{"rajive"} (output of
 #'   \code{\link{Rajive}}).
-#' @param blocks List of original block matrices. Reserved for future
-#'   extraction modes; currently unused.
+#' @param blocks List of original Data Block matrices. Required when
+#'   \code{what = "variance"}; ignored for the other extraction modes.
 #' @param source Character. One of \code{"rajive"} (default) or
 #'   \code{"jackstraw"}.  Selects the result object to extract from.
 #'   \code{"jackstraw"} requires \code{jackstraw_result} to be supplied.
@@ -2709,7 +2709,9 @@ export_results <- function(x,
 #'   to \code{"rajive_interpretation_report.html"}.
 #' @param sections Character vector of sections to include in the report.
 #'   Supported values: \code{"overview"}, \code{"variance"},
-#'   \code{"features"}, \code{"associations"}, \code{"stability"}.
+#'   \code{"features"}, \code{"associations"}, \code{"significance"},
+#'   \code{"stability"}. The \code{"significance"} section requires
+#'   \code{jackstraw_result}.
 #' @param ... Reserved for future extensions.
 #'
 #' @return Invisibly returns \code{output_file}.
@@ -2732,7 +2734,8 @@ rajive_report <- function(ajive_output,
                           jackstraw_result = NULL,
                           output_file = "rajive_interpretation_report.html",
                           sections = c("overview", "variance", "features",
-                                       "associations", "stability"),
+                                       "associations", "significance",
+                                       "stability"),
                           ...) {
   if (!inherits(ajive_output, "rajive"))
     stop("`ajive_output` must be an object of class 'rajive'.", call. = FALSE)
@@ -2776,8 +2779,21 @@ rajive_report <- function(ajive_output,
     }
   }
 
+  if ("significance" %in% sections && !is.null(jackstraw_result)) {
+    sig <- summarize_significant_vars(jackstraw_result = jackstraw_result,
+                                      top_n = 10L)
+    lines <- c(lines, "## Significant Features", "",
+               paste(capture.output(print(sig)), collapse = "\n"), "")
+  }
+
   if ("stability" %in% sections) {
-    lines <- c(lines, "## Stability", "", "Run assess_stability() with desired bootstrap settings for full stability summaries.", "")
+    lines <- c(lines, "## Stability", "",
+               paste0(
+                 "Stability is estimated by `assess_stability()`, which takes a",
+                 " separate bootstrap configuration and is not summarised here. ",
+                 "Run it directly and pass `n_perm`/`B` per your design."
+               ),
+               "")
   }
 
   dir.create(dirname(output_file), recursive = TRUE, showWarnings = FALSE)
@@ -3158,9 +3174,11 @@ summarize_significant_vars <- function(jackstraw_result, block = NULL,
 #' @param object An object of class \code{"rajive"} or
 #'   \code{"jackstraw_rajive"}.
 #' @param plot_type Character.  Passed to \code{\link{plot_components}}.
-#'   For \code{"rajive"} objects the default is \code{"variance"} (requires
-#'   \code{blocks} via \code{...}); for \code{"jackstraw_rajive"} objects the
-#'   default is \code{"jackstraw_summary"}.
+#'   For \code{"rajive"} objects the default is \code{"pairs"}; for
+#'   \code{"jackstraw_rajive"} objects the default is
+#'   \code{"jackstraw_summary"}. Note that \code{plot_type = "variance"}
+#'   additionally needs the original Data Blocks, which are not stored in the
+#'   fit object, so they must be supplied through \code{...}.
 #' @param ... Additional arguments forwarded to \code{\link{plot_components}}.
 #'
 #' @return A \code{ggplot} object.
