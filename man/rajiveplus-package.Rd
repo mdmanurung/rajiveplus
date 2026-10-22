@@ -54,6 +54,9 @@ Authors:
 Other contributors:
 \itemize{
   \item Erica Ponzi (Author of the original RaJIVE implementation) [contributor]
+  \item Abhik Ghosh (Author of the original RaJIVE implementation) [contributor]
+  \item Magne Thoresen (Author of the original RaJIVE implementation) [contributor]
+  \item Mikhael Manurung [copyright holder]
 }
 
 }

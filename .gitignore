@@ -55,6 +55,11 @@ audits/*
 !audits/BENCHMARKS.md
 !audits/RELEASE_CHECKLIST.md
 !audits/FINAL_AUDIT.md
+!audits/EVALUATION_PLAN.md
+!audits/DEFECT_REGISTER.md
+!audits/AGENTS.md
+!audits/PLANS.md
+!audits/PROGRESS.md
 
 !docs/
 docs/*

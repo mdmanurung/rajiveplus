@@ -2,18 +2,54 @@ citHeader("To cite rajiveplus in publications use:")
 
 bibentry(
   bibtype = "Manual",
-  title = "rajiveplus: Robust Angle-based Joint and Individual Variation Explained",
+  title = "rajiveplus: Robust Angle-Based Joint and Individual Variation Explained",
   author = person("Mikhael", "Manurung"),
   year = "2026",
-  note = "Development version in the 0.2.0-rc1 completion stream",
+  note = paste("Development version. The package version in DESCRIPTION is the",
+               "authoritative release identifier."),
   url = "https://github.com/mdmanurung/rajiveplus"
 )
 
-citHeader("rajiveplus extends the original RaJIVE implementation:")
+citHeader("rajiveplus extends the original RaJIVE method:")
 
 bibentry(
-  bibtype = "Manual",
-  title = "RaJIVE",
-  author = person("Erica", "Ponzi"),
-  url = "https://github.com/ericaponzi/RaJIVE"
+  bibtype = "Article",
+  title = "RaJIVE: Robust Angle Based JIVE for Integrating Noisy Multi-Source Data",
+  author = c(person("Erica", "Ponzi"),
+            person("Magne", "Thoresen"),
+            person("Abhik", "Ghosh")),
+  journal = "arXiv preprint arXiv:2101.09110",
+  year = "2021",
+  doi = "10.48550/arXiv.2101.09110"
+)
+
+citHeader("rajiveplus builds on the aJIVE and JIVE estimators:")
+
+bibentry(
+  bibtype = "Article",
+  title = "Angle-based joint and individual variation explained",
+  author = c(person("Qing", "Feng"),
+            person("Mengjie", "Jiang"),
+            person("Jochen", "Hannig"),
+            person("James", "Marron")),
+  journal = "Journal of Multivariate Analysis",
+  volume = "166",
+  pages = "241--265",
+  year = "2018",
+  doi = "10.1016/j.jmva.2018.03.008"
+)
+
+bibentry(
+  bibtype = "Article",
+  title = "Joint and individual variation explained",
+  author = c(person("Eric", "Lock"),
+            person("Keith", "Hoadley"),
+            person("James", "Marron"),
+            person("Andrew", "Nobel")),
+  journal = "Annals of Applied Statistics",
+  volume = "7",
+  number = "1",
+  pages = "523--542",
+  year = "2013",
+  doi = "10.1214/12-AOAS708"
 )
