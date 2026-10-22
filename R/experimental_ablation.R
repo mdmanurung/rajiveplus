@@ -119,7 +119,7 @@
     list(joint = joint, individual = ind, residual = residual,
          selected_individual_rank = original$rank,
          individual_rank_drop = original$rank - ind$rank,
-         individual_true_span_leakage = norm(crossprod(q, ind$full), "F") /
+         individual_fitted_span_leakage = norm(crossprod(q, ind$full), "F") /
            max(norm(ind$full, "F"), .Machine$double.eps),
          reconstruction_relative = norm(X - joint$full - ind$full - residual, "F") /
            max(norm(X, "F"), .Machine$double.eps))

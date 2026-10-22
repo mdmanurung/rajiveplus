@@ -49,7 +49,7 @@ test_that("all eight arms are executable and I pairs share selected fits", {
       expect_lte(max(abs(crossprod(q) - diag(ncol(q))), 0), 1e-10)
     }
     for (b in constrained$blocks) {
-      expect_lte(b$individual_true_span_leakage, 1e-8)
+      expect_lte(b$individual_fitted_span_leakage, 1e-8)
       expect_lte(b$reconstruction_relative, 1e-12)
       expect_gte(b$individual_rank_drop, 0)
     }
@@ -81,7 +81,7 @@ test_that("span constraint handles nonorthogonal scores and rank loss", {
   cache <- list(blocks = list(I), sv_thresholds = 0)
   geometry <- list(joint_scores = q)
   out <- .ablation_finish(cache, geometry, "constrained", selected = selected)
-  expect_lte(out$blocks[[1]]$individual_true_span_leakage, 1e-8)
+  expect_lte(out$blocks[[1]]$individual_fitted_span_leakage, 1e-8)
   expect_equal(out$blocks[[1]]$individual$rank, 1L)
   expect_equal(out$blocks[[1]]$individual_rank_drop, 1L)
   expect_equal(out$blocks[[1]]$individual$full[1:2, ], matrix(0, 2, 2),
@@ -123,5 +123,5 @@ test_that("exact span projection is invariant to Joint coordinates and removes f
   expect_equal(c$blocks[[1]]$individual$rank, 0L)
   expect_equal(c$blocks[[1]]$individual_rank_drop, 2L)
   expect_equal(c$blocks[[1]]$individual$full, matrix(0, 4, 2))
-  expect_equal(c$blocks[[1]]$individual_true_span_leakage, 0)
+  expect_equal(c$blocks[[1]]$individual_fitted_span_leakage, 0)
 })
