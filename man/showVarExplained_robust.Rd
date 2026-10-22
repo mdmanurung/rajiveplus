@@ -2,20 +2,33 @@
 % Please edit documentation in R/Rajive_helpfunctions.R
 \name{showVarExplained_robust}
 \alias{showVarExplained_robust}
-\title{Proportions of variance explained}
+\title{Component energies relative to observed data energy}
 \usage{
 showVarExplained_robust(ajiveResults, blocks)
 }
 \arguments{
-\item{ajiveResults}{List. The decomposition from Rajive}
+\item{ajiveResults}{A fitted \code{rajive} object returned by \code{\link{Rajive}}.}
 
-\item{blocks}{List. The initial data blocks}
+\item{blocks}{List of original numeric data matrices. Missing entries may
+be \code{NA}; infinite and \code{NaN} entries are not allowed.}
 }
 \value{
-The proportion of variance explained by each component
+A list named \code{Joint}, \code{Individual}, and \code{Residual},
+  each containing one numeric value per Data Block. A zero-energy block
+  returns zero for all three components.
 }
 \description{
-Gets the variance explained by each component of the Rajive decomposition
+Computes Joint, Individual, and Residual matrix sums of squares on the
+observed entries, divided by the data sum of squares in each Data Block.
+The Residual is reconstructed as data minus Joint minus Individual.
+}
+\details{
+Robust factors need not be orthonormal, so squared singular values
+  are not used as a substitute for reconstructed matrix energy. Component
+  energies do not necessarily sum to one when cross terms are nonzero.
+  \code{\link{joint_variance_partition}} exposes those cross terms and
+  feature-level sums of squares. Its \code{*_prop} columns use component
+  total energy, a different denominator from the data energy used here.
 }
 \examples{
 \donttest{

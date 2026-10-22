@@ -552,14 +552,25 @@ data_heatmap <- function (data, show_color_bar = TRUE, title = "", xlab = "",
 
 
 
-#' Proportions of variance explained
+#' Component energies relative to observed data energy
 #'
-#' Gets the variance explained by each component of the Rajive decomposition
+#' Computes Joint, Individual, and Residual matrix sums of squares on the
+#' observed entries, divided by the data sum of squares in each Data Block.
+#' The Residual is reconstructed as data minus Joint minus Individual.
 #'
-#' @param ajiveResults List. The decomposition from Rajive
-#' @param blocks List. The initial data blocks
+#' @param ajiveResults A fitted \code{rajive} object returned by \code{\link{Rajive}}.
+#' @param blocks List of original numeric data matrices. Missing entries may
+#'   be \code{NA}; infinite and \code{NaN} entries are not allowed.
 #'
-#' @return The proportion of variance explained by each component
+#' @return A list named \code{Joint}, \code{Individual}, and \code{Residual},
+#'   each containing one numeric value per Data Block. A zero-energy block
+#'   returns zero for all three components.
+#' @details Robust factors need not be orthonormal, so squared singular values
+#'   are not used as a substitute for reconstructed matrix energy. Component
+#'   energies do not necessarily sum to one when cross terms are nonzero.
+#'   \code{\link{joint_variance_partition}} exposes those cross terms and
+#'   feature-level sums of squares. Its \code{*_prop} columns use component
+#'   total energy, a different denominator from the data energy used here.
 #' 
 #' @examples 
 #' \donttest{
@@ -576,28 +587,21 @@ data_heatmap <- function (data, show_color_bar = TRUE, title = "", xlab = "",
 #' @export
 
 showVarExplained_robust <- function(ajiveResults, blocks){
-  l <- length(blocks)
-  # joint variance
-  # joint is the second component for all 3
-  VarJoint = rep(0, l)
-  # Access singular values by name [['d']] not by position [[1]]; the
-  # positional accessor silently uses u instead of d if the return order ever
-  # changes.  sum(d^2) = ||J||_F^2.
-  for (i in 1:l) VarJoint[i] = sum(ajiveResults$block_decomps[[3*(i-1)+2]][["d"]]^2) /
-                                    norm(blocks[[i]], type = "F")^2
-
-  # individual variances
-  # individual is the first component for all 3
-  VarIndividual = rep(0, l)
-  for (i in 1:l) VarIndividual[i] = sum(ajiveResults$block_decomps[[3*(i-1)+1]][["d"]]^2) /
-                                    norm(blocks[[i]], type = "F")^2
-
-  # residual variance
-  VarResidual = 1 - VarJoint - VarIndividual
-
-  VarProp <- list(VarJoint, VarIndividual, VarResidual)
-  names(VarProp) <- c('Joint', 'Individual', 'Residual')
-  VarProp
+  partition <- joint_variance_partition(ajiveResults, blocks)
+  sizes <- vapply(blocks, ncol, integer(1L))
+  offsets <- c(0L, cumsum(sizes))
+  rows <- lapply(seq_along(blocks), function(k) {
+    offsets[[k]] + seq_len(sizes[[k]])
+  })
+  columns <- c(Joint = "joint_ss", Individual = "individual_ss",
+               Residual = "residual_ss")
+  lapply(columns, function(column) {
+    vapply(rows, function(index) {
+      denominator <- sum(partition$data_total_ss[index])
+      if (denominator == 0) return(0)
+      sum(partition[[column]][index]) / denominator
+    }, numeric(1L))
+  })
 }
 
 
@@ -800,6 +804,9 @@ get_all_ranks <- function(ajive_output) {
 #' Produces a stacked bar chart showing the proportion of total variance
 #' explained by the joint, individual, and residual components for each
 #' data block.
+#' Component energies are relative to observed data energy. Their sum need
+#' not be one when the fitted components have nonzero cross terms; a stacked
+#' display does not assert an orthogonal additive variance partition.
 #'
 #' @param ajive_output List returned by \code{\link{Rajive}}.
 #' @param blocks List of data matrices (the same list passed to

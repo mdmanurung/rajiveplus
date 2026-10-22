@@ -1,0 +1,23 @@
+{
+  "name": "baseline_fast_gate_v2",
+  "timestamp": "2026-10-22T11:49:30.084467+00:00",
+  "command": [
+    "bash",
+    "scripts/run_fast_gate.sh"
+  ],
+  "cwd": "/workspace/rajive_stage0/rajiveplus",
+  "source_commit": "8ceabeedea6501a15b10158e40ad8cebd904ec11",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timeout_s": 900,
+  "exit_code": 124,
+  "status": "TIMEOUT",
+  "wall_time_s": 900.0391585289999,
+  "peak_rss_kib": 31608,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "e15d3da72e1ee1c42e2239778b84c87ace286d1f3ae00fa8b6be9dc8ee98b51a",
+  "resource_log_sha256": "fcc13e1dabbad2434fc90f4cddd2eeca8f0827daea58ea249f01da6c3e29f6c2",
+  "threads": 1,
+  "environment_overrides": {
+    "RAJIVE_GATE_DIR": "/workspace/rajive_stage0/evidence/baseline_fast"
+  }
+}

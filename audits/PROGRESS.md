@@ -5,7 +5,60 @@ validation snapshot. Long-form history is archived in
 [archive/progress-pre-maintainer-consolidation-2026-05-18.md](archive/progress-pre-maintainer-consolidation-2026-05-18.md)
 and [archive/progress-pre-consolidation-2026-05-13.md](archive/progress-pre-consolidation-2026-05-13.md).
 
-## Status
+## Current bounded stage — 2026-10-22
+
+**Software and manuscript: NOT_READY.** Local-only work starts from PR #9
+head `8ceabeedea6501a15b10158e40ad8cebd904ec11`; master diverges and has
+not been merged. Package remains 0.1.0. No push, PR, tag, release, clinical
+inference or confirmatory simulation was authorized or performed.
+
+- V1/V2 have a local reporting-only repair. The committed actual-fit tests
+  first produced 27 failures / 6 passes, then 33 actual-fit assertions passed.
+  With the revised supplemental tests, 38 focused assertions pass. Affected
+  regressions pass 132 assertions, with no warning or skip.
+- The same saved fit gives block-1 Residual energy 0.080988684993, rather than
+  the old plug-in 0.086288611819. The change does not refit or change ranks,
+  matrices, object layout, preprocessing defaults, or RNG state.
+  `joint_variance_partition()` numerical semantics and legacy fields remain
+  unchanged; its component-total proportions differ from data-normalized energy.
+- Independent generator/identifiability/Wedin arithmetic/reference tests:
+  76 assertions pass. These are not calibration or a theoretical Wedin proof.
+- The explicit geometry gate still fails 2 assertions and passes 1:
+  Gram error 0.0727897047 (target <=1e-10), Individual leakage 0.01579166
+  (target <=1e-8). No geometry repair was attempted.
+- Additional public-generator probes confirm infeasible feature ranks and
+  forced Individual intersections (B2/B3). Its truth is not automatically
+  certified by the existing 42 generator assertions.
+- The baseline full fast gate timed out after 900 seconds while rendering
+  `native_missing_union`; no final suite totals or PASS are claimed.
+  Packaging and post-repair suite dispositions are recorded in the final
+  stage-0 receipt index, not inferred from historical evidence.
+- The separate local paper foundation has 30 passing tests, a successful
+  five-step acquisition/audit/provenance smoke and fail-closed scientific
+  figures. It registers Fig1–5, S1–10, conditional S11/S12 and TableS1–8;
+  every scientific asset is NOT_READY. It does not supply method adapters,
+  clinical resampling implementations, calibration, or figure renderers.
+
+Receipts and exact commands:
+[validation/2026-10-22-stage0/README.md](validation/2026-10-22-stage0/README.md).
+The execution environment is R 4.4.2, not the historical R 4.5.1 below.
+The earlier numerical calibration values below have not been rerun and must
+not attest this source. The original RaJIVE source is now acquired at the
+full pinned commit, but derivation and license-notice review remain open.
+
+### Next bounded work
+
+1. Repair/certify simulation truth and reconcile the slow-manifest title with
+   its unchanged 0.80 exact-recovery threshold before confirmatory calibration.
+2. Derive Wedin against the pin; audit no-effective-threshold configurations.
+3. Run paired representation/statistic/Individual-refit ablations, then the
+   unchanged rank and inference gates with adequate declared replicate budgets.
+4. Resolve clean-source vignette/build blockers and the full-suite timeout.
+5. Only then expand comparator pilots, applications, figures and manuscript.
+
+## Historical dashboard — preserved, not current-source validation
+
+### Status
 
 Status line: A new evaluation workstream is active and owns the strategy. Its
 plan is [EVALUATION_PLAN.md](EVALUATION_PLAN.md) and its findings are tracked in

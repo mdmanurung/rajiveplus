@@ -1,0 +1,23 @@
+{
+  "name": "matrix_and_generator_probes",
+  "timestamp": "2026-10-22T12:07:11.461809+00:00",
+  "command": [
+    "Rscript",
+    "/workspace/rajive_stage0/verify_repair.R",
+    "/workspace/rajive_stage0/repair",
+    "/workspace/rajive_stage0/evidence"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "92fcdc6327326645260288f74ca2f6773e6e6be0f7016efce703b1a0d8bb6337",
+  "timeout_s": 180,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 1.7374822709998625,
+  "peak_rss_kib": 238276,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "629e8b93c6a3e4b13f84c02099aca06a8eea8d8595d41f23dc86e763649a8213",
+  "resource_log_sha256": "d01c9d2589b1e39dc73adc651f43cd967ebc559620a08da824c13ebccfe1fd4b",
+  "threads": 1,
+  "environment_overrides": {}
+}

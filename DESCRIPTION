@@ -71,4 +71,4 @@ Imports: ggplot2,
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://mdmanurung.github.io/rajiveplus/
 BugReports: https://github.com/mdmanurung/rajiveplus/issues
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

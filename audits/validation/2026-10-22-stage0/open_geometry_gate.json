@@ -1,0 +1,24 @@
+{
+  "name": "open_geometry_gate",
+  "timestamp": "2026-10-22T12:05:10.005597+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "devtools::test(filter=\"robust-basis-orthonormality\", stop_on_failure=TRUE)"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "92fcdc6327326645260288f74ca2f6773e6e6be0f7016efce703b1a0d8bb6337",
+  "timeout_s": 180,
+  "exit_code": 1,
+  "status": "FAIL",
+  "wall_time_s": 17.12559566799996,
+  "peak_rss_kib": 292212,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "e6b9fbb989013c2decffad5b00b6c2723293edc21e7b60a07dc92d64cb3fcccd",
+  "resource_log_sha256": "08e978881bcefd2fa56cf7506939ee90e09f28eb2bb38a1fdd7bc7be82e54dfd",
+  "threads": 1,
+  "environment_overrides": {
+    "RAJIVE_RUN_GEOMETRY_GATE": "1"
+  }
+}

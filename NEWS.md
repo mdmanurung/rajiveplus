@@ -2,6 +2,23 @@
 
 ## Scientific corrections
 
+### Variance reporting uses reconstructed component energies
+
+`showVarExplained_robust()` retains its arguments and named-list return shape,
+but now calculates each component's observed-entry matrix energy divided by
+observed data energy. It no longer substitutes squared robust singular values
+or defines Residual as `1 - Joint - Individual`. Nonorthogonal components have
+cross terms, so the three reported energies need not sum to one. `NA` entries
+are excluded consistently; Inf/NaN are rejected; zero data energy returns zero.
+`full = FALSE` components are reconstructed from the fitted records.
+
+The feature-level `joint_variance_partition()` fields and denominators are
+unchanged: its `*_prop` columns normalize by component-total energy, while its
+`*_ss` fields agree with the block-level reporting after data-energy
+normalization. This reporting repair does not alter the fitted estimator,
+ranks, component matrices, or rank-selection defaults. The geometry and
+calibration release blockers remain open.
+
 ### The Wedin joint-rank threshold is no longer a negative "squared magnitude"
 
 `get_wedin_bound_samples()` returns `n_wedin_samples` independent draws per Data
