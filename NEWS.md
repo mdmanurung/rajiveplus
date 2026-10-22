@@ -2,6 +2,24 @@
 
 ## Scientific corrections
 
+### Stage-1 simulator truth certification (estimator unchanged)
+
+`simulate_blocks()` now rejects insufficient combined feature-rank capacity
+and dimensionally forced all-block Individual intersections before using RNG.
+Feasible construction and RNG behavior are unchanged. A new deterministic
+internal SVD-based certificate checks realized component/signal ranks, metadata
+spaces, Joint/Individual orthogonality, all-block intersections and closure.
+The compact certificate is added to `truth`; uncertifiable draws fail rather
+than being silently replaced. This is numerical truth validation, not recovery
+or statistical calibration.
+
+The stage-1 pinned-source Wedin audit supersedes the historical interpretation
+below: original RaJIVE normally aggregates draws across blocks before taking
+a quantile; the present per-block-quantile reduction is not equivalent.
+`K - sum(error^2)` is conditionally justified for orthogonal projector sums,
+but no end-to-end guarantee for robust factors/amplitudes has been established.
+No threshold formula, activation option or estimator default changes here.
+
 ### Variance reporting uses reconstructed component energies
 
 `showVarExplained_robust()` retains its arguments and named-list return shape,

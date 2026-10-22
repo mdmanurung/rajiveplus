@@ -122,7 +122,8 @@ sim_dist <- function(num, n, p) {
 # `simulate_blocks()` generates truth that satisfies the model the estimator
 # targets: the joint score basis is orthonormal, and every block's Individual
 # score basis is orthonormal and orthogonal to the joint basis. Ground truth is
-# therefore the identifiable target, and a correct estimator should recover it.
+# certified below from realized matrices, including the absence of an extra
+# all-block Individual intersection. Orthogonality alone is not sufficient.
 
 #' Simulate multi-view Data Blocks with an identifiable ground truth
 #'
@@ -130,8 +131,9 @@ sim_dist <- function(num, n, p) {
 #' blocks and whose Individual Component is specific to each block, with score
 #' spaces constructed so the decomposition is identifiable: the joint score
 #' basis is orthonormal, and each block's individual score basis is orthonormal
-#' and orthogonal to the joint basis. This is the generator to use when a
-#' simulation is meant to test whether an estimator recovers the truth.
+#' and orthogonal to the joint basis. Requested ranks must fit each sample and
+#' feature space, and the Individual spaces must have no all-block intersection.
+#' Every realized draw is independently certified from its component matrices.
 #'
 #' For a deliberately misspecified stress case, where the joint and individual
 #' score spaces are allowed to overlap, use [ajive.data.sim()].
@@ -141,7 +143,7 @@ sim_dist <- function(num, n, p) {
 #' @param joint_rank Non-negative integer. Rank of the shared Joint Component.
 #' @param individual_ranks Non-negative integer vector, one per Data Block. Rank
 #'   of each block's Individual Component.
-#' @param noise_sd Positive numeric. Standard deviation of the residual noise.
+#' @param noise_sd Non-negative numeric. Standard deviation of the residual noise.
 #' @param signal_sd Positive numeric. Standard deviation of the component
 #'   loadings.
 #' @param block_names Optional character vector of Data Block names.
@@ -150,7 +152,19 @@ sim_dist <- function(num, n, p) {
 #' @return A list with `blocks`, the list of simulated Data Blocks, and `truth`,
 #'   a list containing the per-block Joint and Individual Component matrices,
 #'   the residual, the joint and individual score bases, the per-block joint
-#'   loadings, and the generating ranks.
+#'   loadings, the generating ranks, and a recomputable matrix-based
+#'   \code{certificate}. Certification is not a statistical recovery guarantee.
+#' @details With \eqn{d = n-r_J}, feasibility requires
+#'   \eqn{r_J+r_{I,k} \le \min(n,p_k)} and
+#'   \eqn{\sum_k r_{I,k} \le (K-1)d}. Pairwise Individual overlap is allowed;
+#'   an additional direction shared by every block is not. The dimension
+#'   checks are followed by realized-matrix checks for ranks, shared Joint
+#'   space, Individual intersections, orthogonality and reconstruction.
+#'   Numerical rank uses dimension-scaled machine precision; geometry uses
+#'   a separate tolerance of \code{1e-10}. Infeasible requests and uncertifiable
+#'   draws fail explicitly, without rank reduction or retry/resampling.
+#'   This generator does not center or scale the blocks. A transformed truth
+#'   must be certified again before use.
 #'
 #' @seealso [ajive.data.sim()] for the overlapping-truth stress generator.
 #'
@@ -193,6 +207,19 @@ simulate_blocks <- function(n, pks, joint_rank, individual_ranks,
       "i" = paste0("joint_rank + max(individual_ranks) = ",
                    joint_rank + max(individual_ranks), " but n = ", n, ".")
     ), class = "rajiveplus_invalid_input")
+  }
+  if (any(joint_rank + individual_ranks > pks)) {
+    cli::cli_abort(
+      "Joint plus Individual rank must fit each block's feature dimension.",
+      class = "rajiveplus_invalid_input", reason = "feature_rank_capacity"
+    )
+  }
+  complement_dimension <- n - joint_rank
+  if (sum(individual_ranks) > (length(pks) - 1) * complement_dimension) {
+    cli::cli_abort(
+      "Individual ranks force an all-block intersection outside the Joint space.",
+      class = "rajiveplus_invalid_input", reason = "forced_individual_intersection"
+    )
   }
   if (!is.numeric(noise_sd) || length(noise_sd) != 1L || !is.finite(noise_sd) ||
       noise_sd < 0) {
@@ -286,7 +313,7 @@ simulate_blocks <- function(n, pks, joint_rank, individual_ranks,
 
   colnames(joint_loadings) <- paste0("feature", seq_len(p_total))
 
-  list(
+  simulation <- list(
     blocks = blocks,
     truth = list(
       joint = joint_matrices,
@@ -303,6 +330,8 @@ simulate_blocks <- function(n, pks, joint_rank, individual_ranks,
       block_names = block_names
     )
   )
+  simulation$truth$certificate <- .certify_simulated_truth(simulation)
+  simulation
 }
 
 #' Orthonormal basis with the requested number of columns

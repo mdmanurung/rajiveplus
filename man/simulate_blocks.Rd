@@ -25,7 +25,7 @@ simulate_blocks(
 \item{individual_ranks}{Non-negative integer vector, one per Data Block. Rank
 of each block's Individual Component.}
 
-\item{noise_sd}{Positive numeric. Standard deviation of the residual noise.}
+\item{noise_sd}{Non-negative numeric. Standard deviation of the residual noise.}
 
 \item{signal_sd}{Positive numeric. Standard deviation of the component
 loadings.}
@@ -38,19 +38,33 @@ loadings.}
 A list with `blocks`, the list of simulated Data Blocks, and `truth`,
   a list containing the per-block Joint and Individual Component matrices,
   the residual, the joint and individual score bases, the per-block joint
-  loadings, and the generating ranks.
+  loadings, the generating ranks, and a recomputable matrix-based
+  \code{certificate}. Certification is not a statistical recovery guarantee.
 }
 \description{
 Generates a list of Data Blocks whose Joint Component is shared across all
 blocks and whose Individual Component is specific to each block, with score
 spaces constructed so the decomposition is identifiable: the joint score
 basis is orthonormal, and each block's individual score basis is orthonormal
-and orthogonal to the joint basis. This is the generator to use when a
-simulation is meant to test whether an estimator recovers the truth.
+and orthogonal to the joint basis. Requested ranks must fit each sample and
+feature space, and the Individual spaces must have no all-block intersection.
+Every realized draw is independently certified from its component matrices.
 }
 \details{
 For a deliberately misspecified stress case, where the joint and individual
 score spaces are allowed to overlap, use [ajive.data.sim()].
+
+With \eqn{d = n-r_J}, feasibility requires
+  \eqn{r_J+r_{I,k} \le \min(n,p_k)} and
+  \eqn{\sum_k r_{I,k} \le (K-1)d}. Pairwise Individual overlap is allowed;
+  an additional direction shared by every block is not. The dimension
+  checks are followed by realized-matrix checks for ranks, shared Joint
+  space, Individual intersections, orthogonality and reconstruction.
+  Numerical rank uses dimension-scaled machine precision; geometry uses
+  a separate tolerance of \code{1e-10}. Infeasible requests and uncertifiable
+  draws fail explicitly, without rank reduction or retry/resampling.
+  This generator does not center or scale the blocks. A transformed truth
+  must be certified again before use.
 }
 \examples{
 sim <- simulate_blocks(n = 60, pks = c(50, 40, 30),
