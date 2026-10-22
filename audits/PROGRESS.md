@@ -31,8 +31,14 @@ inference or confirmatory simulation was authorized or performed.
   certified by the existing 42 generator assertions.
 - The baseline full fast gate timed out after 900 seconds while rendering
   `native_missing_union`; no final suite totals or PASS are claimed.
-  Packaging and post-repair suite dispositions are recorded in the final
-  stage-0 receipt index, not inferred from historical evidence.
+  The repaired fast gate likewise times out after 900 seconds. Excluding
+  only that vignette-render test, the diagnostic suite completes with
+  1,280 passed, 0 failed, 0 test warnings and 18 expected skips. Full source
+  build times out at vignette creation after 300 seconds. No-vignette
+  build/install/reporting smoke succeeds; restricted check is 0 errors,
+  0 warnings, 5 notes with tests/examples/vignettes disabled and Suggests
+  relaxed. None of those restricted diagnostics is a release-gate PASS.
+  Full dispositions are in the stage-0 receipt index.
 - The separate local paper foundation has 30 passing tests, a successful
   five-step acquisition/audit/provenance smoke and fail-closed scientific
   figures. It registers Fig1–5, S1–10, conditional S11/S12 and TableS1–8;

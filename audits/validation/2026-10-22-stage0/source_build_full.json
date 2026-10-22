@@ -1,0 +1,23 @@
+{
+  "name": "source_build_full",
+  "timestamp": "2026-10-22T12:07:34.904476+00:00",
+  "command": [
+    "R",
+    "CMD",
+    "build",
+    "/workspace/rajive_stage0/repair"
+  ],
+  "cwd": "/workspace/rajive_stage0",
+  "source_commit": "",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timeout_s": 300,
+  "exit_code": 124,
+  "status": "TIMEOUT",
+  "wall_time_s": 300.0407339180001,
+  "peak_rss_kib": 31596,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "44090c12d7071d99ec3103dd2e40320b670e8d78d78d1b1b40f9d8dcf948eb71",
+  "resource_log_sha256": "134bc75f1db5265c2c0a3b115d28c6299bffc6b7327cf140dc808475d64b9822",
+  "threads": 1,
+  "environment_overrides": {}
+}
