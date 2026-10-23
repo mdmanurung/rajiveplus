@@ -695,8 +695,15 @@ jackstraw_refit_rajive <- function(
     (1 + sum(null >= group$observed_f[[1L]])) / (1 + length(null))
   })
   rows$p_value <- as.numeric(unlist(p_lookup[as.character(keys)]))
-  rows$p_adjusted <- if (correction == "none") rows$p_value else
-    stats::p.adjust(rows$p_value, method = correction)
+  # One hypothesis per unique block/feature/component key: replicate rows
+  # (the same feature selected in several refits) share the pooled p-value,
+  # so the correction must be applied once per unique hypothesis and mapped
+  # back to the replicate rows. Adjusting all rows directly would count a
+  # hypothesis once per refit that happened to revisit it.
+  rows$p_adjusted <- if (correction == "none") rows$p_value else {
+    adj_unique <- stats::p.adjust(as.numeric(p_lookup), method = correction)
+    as.numeric(stats::setNames(adj_unique, names(p_lookup))[as.character(keys)])
+  }
   structure(
     list(results = rows, metadata = metadata),
     class = c("rajiveplus_refit_jackstraw", "list")

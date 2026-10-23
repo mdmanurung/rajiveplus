@@ -31,7 +31,7 @@
       "allow_skip": false
     },
     {
-      "id": "joint_rank recovers true rank >= 90% of the time under signal",
+      "id": "joint rank is recovered exactly under strong signal",
       "file": "tests/testthat/test-calibration-joint-rank.R",
       "expected_datasets": 100,
       "optional_dependencies": [],
