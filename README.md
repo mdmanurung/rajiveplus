@@ -24,8 +24,8 @@ for multi-source / multi-omics data integration.
 
 See the package website for the full [function
 reference](https://mdmanurung.github.io/rajiveplus/reference/) and the
-[vignettes](https://mdmanurung.github.io/rajiveplus/articles/) for
-benchmarks and applied analyses.
+[vignettes](https://github.com/mdmanurung/rajiveplus/tree/master/vignettes)
+for benchmarks and applied analyses.
 
 ## Validation status
 
