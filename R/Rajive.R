@@ -594,12 +594,21 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
 #' strictly less than \code{min(nrow(X), ncol(X))} for each block.
 
 get_sv_threshold <- function(singular_values, rank){
+  # Identifiability semantics: a joint direction is "trivially projected" in a
+  # block when its projection norm is indistinguishable from noise. The noise
+  # floor is the first singular value past the retained signal rank (the
+  # largest observed noise singular value), so a direction above it exceeds
+  # every observed noise direction. The previous midpoint
+  # 0.5 * (d[rank] + d[rank + 1]) additionally required joint directions to be
+  # as strong as the weakest RETAINED individual direction, which rejected
+  # demonstrably non-trivial joint components (register defect R1: rank-2
+  # exact recovery 0.36 with knife-edge filter drops).
   # When rank == length(singular_values) there is no rank+1 entry; use half
   # the last singular value (midpoint to the implicit floor at 0) to avoid NA.
   if (rank == length(singular_values)) {
     0.5 * singular_values[rank]
   } else {
-    0.5 * (singular_values[rank] + singular_values[rank + 1L])
+    singular_values[rank + 1L]
   }
 }
 

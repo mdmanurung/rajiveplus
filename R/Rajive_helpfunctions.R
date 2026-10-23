@@ -305,7 +305,9 @@ as.numeric(rand_dir_samples)
 #'
 #' @return A numeric vector of length \code{num_samples}: leading squared
 #'   singular values of the permuted stacked signal-score matrix under the
-#'   null of no joint structure.
+#'   null of no joint structure. Each block basis is orthonormalized before
+#'   permutation so the null statistic matches the observed statistic
+#'   (orthonormalized stacked bases; see ADR 0005).
 #' @keywords internal
 #' @importFrom doRNG %dorng%
 
@@ -318,15 +320,25 @@ get_perm_bound_robustH <- function(block_svd, initial_signal_ranks,
   doParallel::registerDoParallel(numCores)
   on.exit(doParallel::stopImplicitCluster(), add = TRUE)
 
+  # Statistic-matched null: the observed joint statistic is computed on the
+  # stack of per-block ORTHONORMALIZED bases (see `.rank_revealing_basis` and
+  # docs/adr/0005-default-orthonormal-geometry.md), so the permutation null
+  # must be computed on the same statistic. Row-permuting an orthonormal basis
+  # preserves orthonormality, and row-permuting a raw basis then
+  # orthonormalizing is equivalent to orthonormalizing then row-permuting
+  # (left singular vectors of P %*% U are P %*% U_d), so orthonormalize once
+  # per block here and permute rows per draw.
+  Qs <- lapply(seq_len(K), function(k) {
+    .rank_revealing_basis(
+      block_svd[[k]][["u"]][, 1:initial_signal_ranks[k], drop = FALSE])
+  })
+
   # Use the M-estimator robust SVD for consistency with the random-direction
   # bound and the rest of the pipeline.
   perm_samples <- .suppress_worker_build_warnings(
     foreach::foreach(s = 1:num_samples, .options.RNG = seed) %dorng% {
-    Uperm <- lapply(seq_len(K), function(k) {
-      pi_k <- sample.int(n_obs)
-      block_svd[[k]][["u"]][pi_k, 1:initial_signal_ranks[k], drop = FALSE]
-    })
-    M_perm <- do.call(cbind, Uperm)
+    M_perm <- do.call(cbind, lapply(seq_len(K), function(k)
+      Qs[[k]][sample.int(n_obs), , drop = FALSE]))
     get_svd_robustH(M_perm, rank = 1L)[['d']][1L]^2
   })
 

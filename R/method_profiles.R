@@ -12,7 +12,7 @@
         wedin_target = "robust_block_signal_perturbation",
         wedin_sampler = "projected_gaussian_qr_frame",
         wedin_denominator = "robust_block_amplitude_at_requested_rank",
-        random_permutation_statistic = "leading_stacked_score_squared_amplitude",
+        random_permutation_statistic = "leading_orthonormal_stacked_factor_squared_amplitude",
         threshold_rule = "max_available_wedin_random_permutation",
         identifiability_norm = "l2",
         individual_constraint = "exact_joint_complement_reprojection",
