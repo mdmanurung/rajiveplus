@@ -40,8 +40,19 @@ Full `Rajive()` pipeline, configuration identical to
 num_cores=1`, `simulate_blocks(n=60, pks=c(50,40,30),
 individual_ranks=c(5,4,3))`.
 
-<!-- CONFIRMATION_RESULTS -->
+Status at snapshot time (2026-10-23 02:00 UTC): **IN PROGRESS**. Completed
+cells:
+
+- Null (B=200): **Type-I = 1/200 = 0.005** (target <= 0.10) — PASS.
+- Rank-1 (B=100) and rank-2 (B=100): running; checkpoints land in
+  `/mnt/shared-workspace/rajive_stage2/calibration/` (`checkpoint_rank1.rds`,
+  `checkpoint_rank2.rds`) and the final verdict in
+  `confirmation_results.json` (`gate_pass` field).
 
 ## Verdict
 
-<!-- CONFIRMATION_VERDICT -->
+PENDING the rank-1/rank-2 confirmation cells. The version remains 0.1.0 and
+the release-checklist slow-manifest row remains un-promoted until the
+confirmation completes; per the stage gate rule, 0.2.0 requires all
+mandatory local gates to pass. Development-pilot evidence (B=25/cell) and
+the confirmed null cell support the fix; the confirmation is the authority.
