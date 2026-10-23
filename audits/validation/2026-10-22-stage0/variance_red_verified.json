@@ -1,0 +1,22 @@
+{
+  "name": "variance_red_verified",
+  "timestamp": "2026-10-22T11:56:24.702431+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "devtools::load_all(\".\",quiet=TRUE); testthat::test_file(\"tests/testthat/test-variance-single-contract.R\",stop_on_failure=TRUE)"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timeout_s": 180,
+  "exit_code": 1,
+  "status": "FAIL",
+  "wall_time_s": 4.603884569000002,
+  "peak_rss_kib": 325876,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "1cbf96fa6912d4b229579d041edad8238f3c774807c0b5f58b982f095340d583",
+  "resource_log_sha256": "5f44ea9522ef5466e39fad72b7b21f55ef86bde0fbdc01bdee6b86d4bc411198",
+  "threads": 1,
+  "environment_overrides": {}
+}

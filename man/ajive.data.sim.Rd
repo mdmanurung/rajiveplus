@@ -30,7 +30,17 @@ ajive.data.sim(
 \item{noise}{Integer. Standard deviation in dist}
 }
 \value{
-Xsim a list of simulated data matrices and true rank values
+A list with two elements. `sim_data` is the list of simulated Data
+  Block matrices. `truth` is a list with `J_true` (the full concatenated
+  Joint Component), `As_true` (the per-block Individual Components),
+  `rankJ`, and `rankA`.
+
+The Individual scores in this generator are drawn independently of the joint
+scores, so the stored truth is \emph{not} an identifiable decomposition and
+the joint and individual score spaces overlap. Use it as a misspecification
+stress case. To validate whether an estimator recovers the truth, use
+[simulate_blocks()], whose joint and individual score spaces are orthogonal
+by construction.
 }
 \description{
 Simulates blocks of data with joint and individual structures

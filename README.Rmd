@@ -38,6 +38,29 @@ See the package website for the full
 and the [vignettes](https://mdmanurung.github.io/rajiveplus/articles/)
 for benchmarks and applied analyses.
 
+## Validation status
+
+The 0.2.0-rc1 completion stream enforces matched-sample and rank contracts,
+records method profiles, and reports matrix and energy closure separately.
+Exact Individual reprojection, exhaustive identifiability rejection, and
+revised Wedin boundary handling are implemented and tested only as internal
+candidate methods; the frozen default retains its prior behavior. Native
+missing-data fitting remains **experimental**: its observed-entry diagnostics
+do not establish recovery or coverage for every missingness mechanism.
+`jackstraw_rajive()` is a fixed-score, approximate procedure; its pooled PIP
+option is also experimental.
+
+The classical projector-sum aggregation candidate was rejected in the frozen
+local pilot because contamination scenarios exceeded the predeclared projector
+error margin. The robust aggregation default was retained. Remote CI, scheduled
+calibration, downstream BMV regeneration, publication, and release tagging are
+not local validation results.
+
+This package extends the original
+[RaJIVE implementation](https://github.com/ericaponzi/RaJIVE) by Erica Ponzi.
+The exact upstream commit could not be pinned in the frozen 0.2.0 local packet
+because the cited local clone was absent and network access was prohibited.
+
 ## Installation
 
 The development version of rajiveplus can be installed from

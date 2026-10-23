@@ -1,4 +1,41 @@
-# rajiveplus (development)
+# rajiveplus development (0.2.0-rc1 completion stream)
+
+## Validation and contracts
+
+- Native missing-data fitting now allows 30 outer iterations by default while
+  retaining the five-iteration inner completion default. Dataset-level
+  calibration covers MCAR, MAR-like, and structured-row missingness and MCAR
+  bootstrap score coverage.
+- Fixed-score jackstraw and default pooled PIPs now have a deterministic,
+  truth-labelled 100-dataset calibration. Automatic PIP pi0 estimation falls
+  back conservatively to pi0 = 1 when discrete empirical p-values make the
+  qvalue spline undefined, and records that fallback in result metadata.
+- Slow calibration runs each manifest-listed file in an isolated fail-closed R
+  process and verifies JUnit tests plus per-replicate TSV evidence.
+- Corrected the Wedin U-side Haar calibration reference to sample the full
+  ambient orthogonal complement. The former reference used only the remaining
+  columns of a thin SVD for tall matrices and therefore omitted the left
+  nullspace.
+- Added strict Data Block, sample-alignment, rank, and degenerate-feature
+  contracts with typed conditions and preserved feature mappings.
+- Added strict complete, incomplete, and rank-only result constructors,
+  versioned method-profile metadata, validated simulation/RNG manifests, and
+  common Joint-coordinate access through `get_joint_coordinates()`.
+- Internal candidate helpers exactly reproject Individual matrices into the
+  Joint complement, exhaust all unsupported Joint directions, and handle
+  low-dimensional or saturated Wedin complements against an independent R
+  reference. These statistical changes were not promoted after the paired
+  candidate failed its frozen acceptance gate.
+- Variance diagnostics now expose component energies, all pairwise cross
+  terms, matrix reconstruction error, and energy closure error. The legacy
+  `reconstruction_error` column retains its previous definition.
+- The projector-sum geometric aggregation candidate was rejected after its
+  bounded contamination pilot exceeded the frozen noninferiority margin; the
+  robust aggregation default remains active.
+- Native missing-data fitting, fixed-score jackstraw inference, and pooled PIPs
+  remain scoped methods: their declared simulation gates pass, while MNAR,
+  automatic-rank inference, component-specific PIP pooling, and application
+  validity remain experimental.
 
 ## Breaking changes
 

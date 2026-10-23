@@ -1,0 +1,26 @@
+{
+  "name": "diagnostic_install",
+  "timestamp": "2026-10-22T12:14:43.994259+00:00",
+  "command": [
+    "R",
+    "CMD",
+    "INSTALL",
+    "--library=/workspace/rajive_stage0/installed",
+    "--no-docs",
+    "--no-html",
+    "rajiveplus_0.1.0.tar.gz"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "6b44965bcfe3b9e014ffdfc0b020170eca1640b148010f1b9dd70f6a30019924",
+  "timeout_s": 180,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 19.31877952500008,
+  "peak_rss_kib": 582952,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "ffba46c84b168d93d32e655b3149ab5b914e9af315002156872853547d6cac7e",
+  "resource_log_sha256": "71d26cc5adba5f9b6b9a2c820aa37fdddf74e3c6895f9c16f5213ba989a44745",
+  "threads": 1,
+  "environment_overrides": {}
+}

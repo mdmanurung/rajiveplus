@@ -17,12 +17,18 @@ test_that("get_sv_threshold returns finite value at rank == length(d) length-1",
   expect_equal(rajiveplus:::get_sv_threshold(c(5), rank = 1), 2.5)
 })
 
-test_that("get_sv_threshold matches midpoint formula in interior", {
-  # Regression: interior entries must be unchanged.
+test_that("get_sv_threshold uses the noise floor in the interior", {
+  # Register defect R1 fix: the identifiability threshold is the first noise
+  # singular value (largest observed noise direction), not the midpoint
+  # between the last signal and first noise singular values. The midpoint
+  # additionally required joint directions to be as strong as the weakest
+  # retained individual direction, which rejected demonstrably non-trivial
+  # joint components (a projection above every observed noise singular value
+  # is not a trivial projection).
   d <- c(10, 5, 2, 1)
-  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 1), 0.5 * (10 + 5))
-  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 2), 0.5 * (5  + 2))
-  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 3), 0.5 * (2  + 1))
+  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 1), 5)
+  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 2), 2)
+  expect_equal(rajiveplus:::get_sv_threshold(d, rank = 3), 1)
 })
 
 test_that("Rajive does not error when initial_signal_ranks equals min(dim(block))", {

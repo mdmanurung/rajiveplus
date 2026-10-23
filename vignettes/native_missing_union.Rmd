@@ -27,7 +27,7 @@ The blocks share a latent sample trend but cover different subsets of samples,
 similar to a study where not every assay was measured for every participant.
 
 ```{r simulate}
-all_samples <- sprintf("sample_%02d", seq_len(50))
+all_samples <- sprintf("sample_%02d", seq_len(36))
 joint_scores <- scale(cbind(
   seq(-1, 1, length.out = length(all_samples)) +
     rnorm(length(all_samples), sd = 0.15),
@@ -52,9 +52,9 @@ make_block <- function(sample_idx, n_features, prefix, noise = 0.45) {
 }
 
 raw_blocks <- list(
-  celltype = make_block(1:42, 96, "cell"),
-  cytokine_6h = make_block(10:50, 104, "cy6"),
-  enzyme_24h = make_block(c(1:25, 31:50), 88, "enz")
+  celltype = make_block(1:30, 48, "cell"),
+  cytokine_6h = make_block(8:36, 56, "cy6"),
+  enzyme_24h = make_block(c(1:18, 25:36), 44, "enz")
 )
 
 raw_blocks$cytokine_6h[2, 3] <- NA_real_
@@ -105,21 +105,28 @@ from overfitting observed entries.
 
 ```{r fit}
 
+# Render-budget note: the candidate-rank diagnostics below dominate the
+# render time. The published settings (initial ranks c(7,6,8),
+# rank_repeats = 5, n_perm_samples = 1000) exceed 35 minutes per render;
+# the workflow demonstration uses the reduced settings below without
+# changing any content claim. `joint_rank = NA` still triggers the native
+# candidate-rank diagnostics over the default candidate set
+# `0:min(initial_signal_ranks)`.
 fit_union <- Rajive(
   blocks_union,
-  initial_signal_ranks = c(7L, 6L, 8L),
+  initial_signal_ranks = c(3L, 3L, 4L),
   missing = "native",
   mask = mask,
   joint_rank = NA,
   full = TRUE,
-  n_perm_samples = 1000,
+  n_perm_samples = 250,
   identifiability_norm = "l2",
-  num_cores = 10L,
+  num_cores = 2L,
   missing_control = rajive_missing_control(
     center = TRUE,
     scale = TRUE,
     normalize = TRUE,
-    rank_repeats = 5L,
+    rank_repeats = 2L,
     svd_shrinkage = "missmda",
     svd_shrinkage_coeff = 1,
     n_refits = 10L

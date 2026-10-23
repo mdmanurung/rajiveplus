@@ -19,7 +19,16 @@ A data frame with one row per feature and columns:
   \code{feature}, \code{block}, \code{joint_ss}, \code{individual_ss},
   \code{residual_ss}, \code{component_total_ss}, \code{data_total_ss},
   \code{joint_prop}, \code{individual_prop}, \code{residual_prop}, and
-  \code{reconstruction_error}.
+  \code{reconstruction_error}. The legacy \code{reconstruction_error}
+  remains the absolute difference between data energy and the sum of the
+  three component energies. New columns report all pairwise cross terms,
+  relative matrix reconstruction error, and relative energy closure error.
+  The \code{*_prop} columns divide each component sum of squares by
+  \code{component_total_ss}, not by \code{data_total_ss}. For block-level
+  component energy relative to observed data energy, use
+  \code{\link{showVarExplained_robust}}. Component energies plus the
+  pairwise cross terms, rather than component energies alone, reconstruct
+  the data energy in a nonorthogonal decomposition.
 }
 \description{
 Computes a per-feature sum-of-squares decomposition for each block from a

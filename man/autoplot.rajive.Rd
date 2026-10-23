@@ -20,9 +20,11 @@
 \code{"jackstraw_rajive"}.}
 
 \item{plot_type}{Character.  Passed to \code{\link{plot_components}}.
-For \code{"rajive"} objects the default is \code{"variance"} (requires
-\code{blocks} via \code{...}); for \code{"jackstraw_rajive"} objects the
-default is \code{"jackstraw_summary"}.}
+For \code{"rajive"} objects the default is \code{"pairs"}; for
+\code{"jackstraw_rajive"} objects the default is
+\code{"jackstraw_summary"}. Note that \code{plot_type = "variance"}
+additionally needs the original Data Blocks, which are not stored in the
+fit object, so they must be supplied through \code{...}.}
 
 \item{...}{Additional arguments forwarded to \code{\link{plot_components}}.}
 }

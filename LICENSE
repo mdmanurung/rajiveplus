@@ -1,2 +1,14 @@
 YEAR: 2026
 COPYRIGHT HOLDER: Mikhael Manurung
+
+YEAR: 2021
+COPYRIGHT HOLDER: Erica Ponzi
+
+This package is derived in part from the original RaJIVE implementation
+(ericaponzi/RaJIVE, pinned at commit 7d494d11029e538587ee9b27688adacf7f1f9841),
+distributed under the MIT license with the copyright notice
+"YEAR: 2021, COPYRIGHT HOLDER: Erica Ponzi". The retained and adapted
+portions (including the robust singular value decomposition and the core
+JIVE estimation routines) remain subject to that MIT license; the notice is
+reproduced here as required by it. The original RaJIVE method is described
+in Ponzi, Thoresen and Ghosh (2021), arXiv:2101.09110.

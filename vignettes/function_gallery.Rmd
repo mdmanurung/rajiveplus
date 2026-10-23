@@ -167,15 +167,18 @@ sim2 <- ajive.data.sim(
   dist.type = 1,
   noise     = 1
 )
-cat("True joint rank:      ", sim2$rankJ_true, "\n")
-cat("True individual ranks:", sim2$rankA_true, "\n")
+cat("True joint rank:      ", sim2$truth$rankJ, "\n")
+cat("True individual ranks:", sim2$truth$rankA, "\n")
 cat("Block 1 dimensions:   ", dim(sim2$sim_data[[1]]), "\n")
 ```
 
 
 **What to look for.** `sim_data` is a list of K sample-by-feature matrices.
-`rankJ_true` and `rankA_true` record the planted ranks, which become the truth
-set for recovery checks.
+`truth$rankJ` and `truth$rankA` record the planted ranks. Note that this
+generator draws the individual scores independently of the joint scores, so
+`truth$As_true` is a stress case rather than an identifiable target; use
+`simulate_blocks()` when you want a ground truth an estimator should be able to
+recover.
 
 ---
 

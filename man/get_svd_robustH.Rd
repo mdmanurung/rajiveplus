@@ -13,6 +13,8 @@ get_svd_robustH(
   shrinkage_coeff = 1,
   max_iter = 100L,
   tol = 1e-07,
+  irls_max_iter = 1000L,
+  irls_tol = 1e-05,
   warn_nonconvergence = FALSE
 )
 }
@@ -32,6 +34,8 @@ get_svd_robustH(
 
 \item{max_iter, tol}{Iteration cap and convergence tolerance forwarded to
 the weighted SVD path.}
+
+\item{irls_max_iter, irls_tol}{Inner robust IRLS iteration cap and tolerance.}
 
 \item{warn_nonconvergence}{Logical; warn if weighted completion reaches
 \code{max_iter}.}

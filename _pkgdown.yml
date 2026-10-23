@@ -53,6 +53,8 @@ reference:
       - get_block_scores
       - get_block_loadings
       - get_block_matrix
+      - get_feature_map
+      - get_joint_coordinates
 
   - title: "Native missing-data support"
     desc: "Fit, diagnose, and reconstruct native observed-entry incomplete-data decompositions."
@@ -145,6 +147,7 @@ reference:
       non-zero joint loadings.
     contents:
       - jackstraw_rajive
+      - jackstraw_refit_rajive
       - print.jackstraw_rajive
       - summary.jackstraw_rajive
       - get_significant_vars

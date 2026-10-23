@@ -1,0 +1,23 @@
+{
+  "name": "postrepair_fast_gate",
+  "timestamp": "2026-10-22T12:12:34.959857+00:00",
+  "command": [
+    "bash",
+    "scripts/run_fast_gate.sh"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "timeout_s": 900,
+  "exit_code": 124,
+  "status": "TIMEOUT",
+  "wall_time_s": 900.041687204,
+  "peak_rss_kib": 30888,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "64a7500ae52bb5623c9ba46d133428e05022bc59fff34abdc3ab61b0dd5548f2",
+  "resource_log_sha256": "45a70564fad00754e7e412487a14fb87c68847994fb6fd5f7a892cc3897ff283",
+  "threads": 1,
+  "environment_overrides": {
+    "RAJIVE_GATE_DIR": "/workspace/rajive_stage0/evidence/postrepair_fast"
+  }
+}

@@ -351,7 +351,10 @@ test_that("jackstraw p-values are bounded away from 0 and well-spread", {
   X1 <- matrix(rnorm(n * 80), n, 80)
   X2 <- matrix(rnorm(n * 60), n, 60)
   blocks <- list(X1, X2)
-  ajive_out <- Rajive(blocks, initial_signal_ranks = c(3, 3), joint_rank = 2)
+  # This test isolates empirical p-value support. Independent null blocks can
+  # correctly lose all fixed candidate directions under the production
+  # identifiability filter, so supply an explicit orthonormal score fixture.
+  ajive_out <- list(joint_scores = qr.Q(qr(matrix(rnorm(n * 2), n, 2))))
   js <- jackstraw_rajive(ajive_out, blocks,
                          alpha = 0.05, n_null = 20, correction = "none")
 

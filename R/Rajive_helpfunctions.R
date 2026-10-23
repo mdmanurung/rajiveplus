@@ -14,6 +14,7 @@
 #'   the weighted SVD path.
 #' @param warn_nonconvergence Logical; warn if weighted completion reaches
 #'   \code{max_iter}.
+#' @param irls_max_iter,irls_tol Inner robust IRLS iteration cap and tolerance.
 #'
 #' @return List. The SVD of X.
 
@@ -21,12 +22,16 @@
 
 get_svd_robustH <- function(X, rank=NULL, weights = NULL, shrinkage = 0,
                             shrinkage_coeff = 1, max_iter = 100L,
-                            tol = 1e-7, warn_nonconvergence = FALSE){
+                            tol = 1e-7, irls_max_iter = 1000L,
+                            irls_tol = 1e-5,
+                            warn_nonconvergence = FALSE){
 
   if(is.null(rank)){
     decomposition <- RobRSVD.all(X, weights = weights, shrinkage = shrinkage,
                                  shrinkage_coeff = shrinkage_coeff,
                                  max_iter = max_iter, tol = tol,
+                                 irls_max_iter = irls_max_iter,
+                                 irls_tol = irls_tol,
                                  warn_nonconvergence = warn_nonconvergence)
     decomposition
   } else{
@@ -34,6 +39,8 @@ get_svd_robustH <- function(X, rank=NULL, weights = NULL, shrinkage = 0,
                                  shrinkage = shrinkage,
                                  shrinkage_coeff = shrinkage_coeff,
                                  max_iter = max_iter, tol = tol,
+                                 irls_max_iter = irls_max_iter,
+                                 irls_tol = irls_tol,
                                  warn_nonconvergence = warn_nonconvergence)
     decomposition
   }
@@ -90,6 +97,25 @@ svd_reconstruction <- function(decomposition){
     diag(decomposition[['d']][1:r], nrow=r, ncol=r) %*%
     t(decomposition[['v']])
 
+}
+
+#' Rank-revealing orthonormal basis of the column space of a matrix.
+#'
+#' Returns an orthonormal basis (to machine precision) of the column space of
+#' \code{x}, dropping numerically rank-deficient directions. This enforces the
+#' AJIVE geometry contract that score matrices are orthonormal subspace
+#' bases -- a contract the robust SVD does not guarantee for its retained
+#' factors (defects G1/G2; see \code{docs/adr/0005-default-orthonormal-geometry.md}).
+#'
+#' @param x Matrix. May have zero columns.
+#'
+#' @return Matrix with \code{nrow(x)} rows and \code{rank(x)} orthonormal columns.
+#' @noRd
+.rank_revealing_basis <- function(x) {
+  if (!ncol(x)) return(matrix(numeric(), nrow(x), 0L))
+  s <- svd(x, nu = min(dim(x)), nv = 0L)
+  tolerance <- max(dim(x)) * .Machine$double.eps * max(s$d, 0)
+  s$u[, seq_len(sum(s$d > tolerance)), drop = FALSE]
 }
 
 #' Gets the wedin bounds
@@ -279,7 +305,9 @@ as.numeric(rand_dir_samples)
 #'
 #' @return A numeric vector of length \code{num_samples}: leading squared
 #'   singular values of the permuted stacked signal-score matrix under the
-#'   null of no joint structure.
+#'   null of no joint structure. Each block basis is orthonormalized before
+#'   permutation so the null statistic matches the observed statistic
+#'   (orthonormalized stacked bases; see ADR 0005).
 #' @keywords internal
 #' @importFrom doRNG %dorng%
 
@@ -292,15 +320,25 @@ get_perm_bound_robustH <- function(block_svd, initial_signal_ranks,
   doParallel::registerDoParallel(numCores)
   on.exit(doParallel::stopImplicitCluster(), add = TRUE)
 
+  # Statistic-matched null: the observed joint statistic is computed on the
+  # stack of per-block ORTHONORMALIZED bases (see `.rank_revealing_basis` and
+  # docs/adr/0005-default-orthonormal-geometry.md), so the permutation null
+  # must be computed on the same statistic. Row-permuting an orthonormal basis
+  # preserves orthonormality, and row-permuting a raw basis then
+  # orthonormalizing is equivalent to orthonormalizing then row-permuting
+  # (left singular vectors of P %*% U are P %*% U_d), so orthonormalize once
+  # per block here and permute rows per draw.
+  Qs <- lapply(seq_len(K), function(k) {
+    .rank_revealing_basis(
+      block_svd[[k]][["u"]][, 1:initial_signal_ranks[k], drop = FALSE])
+  })
+
   # Use the M-estimator robust SVD for consistency with the random-direction
   # bound and the rest of the pipeline.
   perm_samples <- .suppress_worker_build_warnings(
     foreach::foreach(s = 1:num_samples, .options.RNG = seed) %dorng% {
-    Uperm <- lapply(seq_len(K), function(k) {
-      pi_k <- sample.int(n_obs)
-      block_svd[[k]][["u"]][pi_k, 1:initial_signal_ranks[k], drop = FALSE]
-    })
-    M_perm <- do.call(cbind, Uperm)
+    M_perm <- do.call(cbind, lapply(seq_len(K), function(k)
+      Qs[[k]][sample.int(n_obs), , drop = FALSE]))
     get_svd_robustH(M_perm, rank = 1L)[['d']][1L]^2
   })
 
@@ -545,14 +583,25 @@ data_heatmap <- function (data, show_color_bar = TRUE, title = "", xlab = "",
 
 
 
-#' Proportions of variance explained
+#' Component energies relative to observed data energy
 #'
-#' Gets the variance explained by each component of the Rajive decomposition
+#' Computes Joint, Individual, and Residual matrix sums of squares on the
+#' observed entries, divided by the data sum of squares in each Data Block.
+#' The Residual is reconstructed as data minus Joint minus Individual.
 #'
-#' @param ajiveResults List. The decomposition from Rajive
-#' @param blocks List. The initial data blocks
+#' @param ajiveResults A fitted \code{rajive} object returned by \code{\link{Rajive}}.
+#' @param blocks List of original numeric data matrices. Missing entries may
+#'   be \code{NA}; infinite and \code{NaN} entries are not allowed.
 #'
-#' @return The proportion of variance explained by each component
+#' @return A list named \code{Joint}, \code{Individual}, and \code{Residual},
+#'   each containing one numeric value per Data Block. A zero-energy block
+#'   returns zero for all three components.
+#' @details Robust factors need not be orthonormal, so squared singular values
+#'   are not used as a substitute for reconstructed matrix energy. Component
+#'   energies do not necessarily sum to one when cross terms are nonzero.
+#'   \code{\link{joint_variance_partition}} exposes those cross terms and
+#'   feature-level sums of squares. Its \code{*_prop} columns use component
+#'   total energy, a different denominator from the data energy used here.
 #' 
 #' @examples 
 #' \donttest{
@@ -569,28 +618,21 @@ data_heatmap <- function (data, show_color_bar = TRUE, title = "", xlab = "",
 #' @export
 
 showVarExplained_robust <- function(ajiveResults, blocks){
-  l <- length(blocks)
-  # joint variance
-  # joint is the second component for all 3
-  VarJoint = rep(0, l)
-  # Access singular values by name [['d']] not by position [[1]]; the
-  # positional accessor silently uses u instead of d if the return order ever
-  # changes.  sum(d^2) = ||J||_F^2.
-  for (i in 1:l) VarJoint[i] = sum(ajiveResults$block_decomps[[3*(i-1)+2]][["d"]]^2) /
-                                    norm(blocks[[i]], type = "F")^2
-
-  # individual variances
-  # individual is the first component for all 3
-  VarIndividual = rep(0, l)
-  for (i in 1:l) VarIndividual[i] = sum(ajiveResults$block_decomps[[3*(i-1)+1]][["d"]]^2) /
-                                    norm(blocks[[i]], type = "F")^2
-
-  # residual variance
-  VarResidual = 1 - VarJoint - VarIndividual
-
-  VarProp <- list(VarJoint, VarIndividual, VarResidual)
-  names(VarProp) <- c('Joint', 'Individual', 'Residual')
-  VarProp
+  partition <- joint_variance_partition(ajiveResults, blocks)
+  sizes <- vapply(blocks, ncol, integer(1L))
+  offsets <- c(0L, cumsum(sizes))
+  rows <- lapply(seq_along(blocks), function(k) {
+    offsets[[k]] + seq_len(sizes[[k]])
+  })
+  columns <- c(Joint = "joint_ss", Individual = "individual_ss",
+               Residual = "residual_ss")
+  lapply(columns, function(column) {
+    vapply(rows, function(index) {
+      denominator <- sum(partition$data_total_ss[index])
+      if (denominator == 0) return(0)
+      sum(partition[[column]][index]) / denominator
+    }, numeric(1L))
+  })
 }
 
 
@@ -731,10 +773,26 @@ get_block_matrix <- function(ajive_output, k, type = c("joint", "individual", "r
     )
   }
   type <- match.arg(type)
-  # block_decomps layout per block k: individual at 3k-2, joint at 3k-1, residual at 3k
-  if (type == "joint")       return(ajive_output$block_decomps[[3L * (k - 1L) + 2L]][["full"]])
-  if (type == "individual")  return(ajive_output$block_decomps[[3L * (k - 1L) + 1L]][["full"]])
-  if (type == "residual")    return(ajive_output$block_decomps[[3L * k]])
+  if (!is.numeric(k) || length(k) != 1L || is.na(k) || !is.finite(k) ||
+      k != as.integer(k)) {
+    cli::cli_abort("`k` must be a positive integer Data Block index.")
+  }
+  k <- as.integer(k)
+
+  record <- .get_block_decomp(ajive_output, k, type)
+  if (type %in% c("joint", "individual") && !is.matrix(record[["full"]])) {
+    return(NA)
+  }
+
+  tryCatch(
+    .get_component_matrix(ajive_output, k, type),
+    rajiveplus_component_matrix_unavailable = function(cnd) {
+      if (identical(cnd$reason, "residual_not_stored")) {
+        return(NA)
+      }
+      stop(cnd)
+    }
+  )
 }
 
 
@@ -777,6 +835,9 @@ get_all_ranks <- function(ajive_output) {
 #' Produces a stacked bar chart showing the proportion of total variance
 #' explained by the joint, individual, and residual components for each
 #' data block.
+#' Component energies are relative to observed data energy. Their sum need
+#' not be one when the fitted components have nonzero cross terms; a stacked
+#' display does not assert an orthogonal additive variance partition.
 #'
 #' @param ajive_output List returned by \code{\link{Rajive}}.
 #' @param blocks List of data matrices (the same list passed to

@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "scope": "native_jackstraw_pip",
+  "environment_flag": "RAJIVE_RUN_SLOW=1",
+  "required_tests": [
+    {
+      "id": "native promoted outer loop converges across declared scenarios",
+      "file": "tests/testthat/test-calibration-native.R",
+      "expected_datasets": 60,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "native recovery is noninferior to legacy and mean imputation",
+      "file": "tests/testthat/test-calibration-native.R",
+      "expected_datasets": 60,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "native bootstrap score intervals attain declared MCAR coverage",
+      "file": "tests/testthat/test-calibration-native.R",
+      "expected_datasets": 30,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "jackstraw controls dataset-level null discovery and FDR",
+      "file": "tests/testthat/test-calibration-jackstraw.R",
+      "expected_datasets": 100,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "jackstraw retains dataset-level power for declared signal",
+      "file": "tests/testthat/test-calibration-jackstraw.R",
+      "expected_datasets": 100,
+      "optional_dependencies": [],
+      "allow_skip": false
+    },
+    {
+      "id": "pooled PIPs separate signal and control high null probabilities",
+      "file": "tests/testthat/test-calibration-jackstraw.R",
+      "expected_datasets": 100,
+      "optional_dependencies": ["qvalue"],
+      "allow_skip": false
+    }
+  ],
+  "required_artifacts": [
+    {
+      "path": "native-recovery.tsv",
+      "expected_rows": 60,
+      "required_columns": [
+        "scenario_id", "replicate_id", "status", "promoted_converged",
+        "promoted_projector_error", "mean_imputation_projector_error"
+      ]
+    },
+    {
+      "path": "native-coverage.tsv",
+      "expected_rows": 30,
+      "required_columns": [
+        "scenario_id", "replicate_id", "status", "coverage",
+        "mean_interval_width"
+      ]
+    },
+    {
+      "path": "jackstraw-pip.tsv",
+      "expected_rows": 100,
+      "required_columns": [
+        "scenario_id", "replicate_id", "status", "null_raw_fpr",
+        "false_discovery_proportion", "bh_power", "null_pip_90_rate",
+        "pip_power_50", "pip_auc", "pip_pi0_fallback_count",
+        "pip_nonfinite_lfdr_count"
+      ]
+    }
+  ]
+}

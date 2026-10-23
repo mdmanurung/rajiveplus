@@ -10,7 +10,8 @@ rajive_report(
   metadata = NULL,
   jackstraw_result = NULL,
   output_file = "rajive_interpretation_report.html",
-  sections = c("overview", "variance", "features", "associations", "stability"),
+  sections = c("overview", "variance", "features", "associations", "significance",
+    "stability"),
   ...
 )
 }
@@ -34,7 +35,9 @@ to \code{"rajive_interpretation_report.html"}.}
 
 \item{sections}{Character vector of sections to include in the report.
 Supported values: \code{"overview"}, \code{"variance"},
-\code{"features"}, \code{"associations"}, \code{"stability"}.}
+\code{"features"}, \code{"associations"}, \code{"significance"},
+\code{"stability"}. The \code{"significance"} section requires
+\code{jackstraw_result}.}
 
 \item{...}{Reserved for future extensions.}
 }

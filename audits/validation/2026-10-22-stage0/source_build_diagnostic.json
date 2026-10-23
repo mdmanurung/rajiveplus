@@ -1,0 +1,25 @@
+{
+  "name": "source_build_diagnostic",
+  "timestamp": "2026-10-22T12:14:37.647110+00:00",
+  "command": [
+    "R",
+    "CMD",
+    "build",
+    "--no-build-vignettes",
+    "--no-manual",
+    "."
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "6b44965bcfe3b9e014ffdfc0b020170eca1640b148010f1b9dd70f6a30019924",
+  "timeout_s": 180,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 0.9529142080000383,
+  "peak_rss_kib": 154924,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "665abdb90feeffe6cbb9b00b73653f72f8e39849860b678e5965d9efb0e4665e",
+  "resource_log_sha256": "c34c31f5c7c4370d3ca28f07d4ee5fcf9cd1862ad7b71eff5a9d6cd6469f7ff8",
+  "threads": 1,
+  "environment_overrides": {}
+}

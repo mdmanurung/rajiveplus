@@ -13,6 +13,8 @@ RobRSVD.all(
   shrinkage_coeff = 1,
   max_iter = 100L,
   tol = 1e-07,
+  irls_max_iter = 1000L,
+  irls_tol = 1e-05,
   warn_nonconvergence = FALSE
 )
 }
@@ -44,6 +46,11 @@ iterations used by the missing-data (weighted) SVD path. Defaults to
 \item{tol}{Numeric. Relative convergence tolerance for the weighted SVD
 path; iteration stops when the objective changes by less than this
 fraction. Defaults to \code{1e-7}.}
+
+\item{irls_max_iter}{Integer iteration cap for each inner robust rank-one
+IRLS fit.}
+
+\item{irls_tol}{Numeric convergence tolerance for inner robust IRLS fits.}
 
 \item{warn_nonconvergence}{Logical. If \code{TRUE}, emit a warning when the
 weighted SVD path reaches \code{max_iter} without converging. Defaults to

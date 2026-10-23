@@ -171,7 +171,10 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #' Compute posterior inclusion probabilities (PIPs) from p-values
 #'
 #' Wraps \code{qvalue::lfdr()} to compute \code{PIP = 1 - lfdr} for a vector
-#' of p-values.  Called once per grouping unit when \code{pip = TRUE}.
+#' of p-values. Called once per grouping unit when \code{pip = TRUE}. If
+#' automatic pi0 estimation fails for discrete empirical p-values, the helper
+#' records a conservative fallback to \code{pi0 = 1}; non-finite local FDR
+#' values are conservatively replaced by one.
 #'
 #' @param pvalues numeric vector of p-values in (0, 1].
 #' @param pi0     passed to \code{qvalue::lfdr()} as \code{pi0}. \code{NULL}
@@ -181,10 +184,29 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #'
 #' @keywords internal
 .pip_from_pvalues <- function(pvalues, pi0 = NULL) {
+  if (!is.numeric(pvalues) || !length(pvalues) || anyNA(pvalues) ||
+      any(!is.finite(pvalues)) || any(pvalues < 0 | pvalues > 1)) {
+    stop("'pvalues' must be a finite numeric vector in [0, 1].", call. = FALSE)
+  }
   args <- list(p = pvalues)
   if (!is.null(pi0)) args$pi0 <- pi0
-  lfdr_vals <- do.call(qvalue::lfdr, args)
-  1 - lfdr_vals
+  fallback_used <- FALSE
+  lfdr_vals <- tryCatch(
+    do.call(qvalue::lfdr, args),
+    error = function(error) {
+      if (!is.null(pi0)) stop(error)
+      fallback_used <<- TRUE
+      qvalue::lfdr(pvalues, pi0 = 1)
+    }
+  )
+  nonfinite <- !is.finite(lfdr_vals)
+  if (any(nonfinite)) {
+    lfdr_vals[nonfinite] <- 1
+  }
+  out <- pmin(1, pmax(0, 1 - lfdr_vals))
+  attr(out, "pi0_fallback_used") <- fallback_used
+  attr(out, "nonfinite_lfdr_replaced") <- sum(nonfinite)
+  out
 }
 
 
@@ -212,6 +234,12 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #' score as recovered from data by RaJIVE, not the unobservable true latent
 #' factor.  It does not imply that the feature is a causal driver or that
 #' the association would hold against the true latent score.
+#' This implementation keeps the estimated scores fixed while generating
+#' feature-level null statistics. It is therefore an approximation rather than
+#' a full decomposition refit. Dataset-level simulation calibration covers a
+#' fixed true joint rank with dense signal and appended independent null
+#' features; other dependence, rank-selection, and misspecification regimes
+#' remain experimental.
 #'
 #' @param ajive_output List returned by \code{\link{Rajive}}.
 #' @param blocks List of data matrices (same list passed to
@@ -248,6 +276,8 @@ generate_null_f_stats <- function(X_t, joint_comp_scores, n_null) {
 #'   component combination).  Larger groups give more stable \eqn{\pi_0}
 #'   estimates and are recommended when each block/component has fewer than
 #'   ~200 features; smaller groups allow \eqn{\pi_0} to vary across components.
+#'   Simulation calibration currently supports the default pooled grouping;
+#'   the component-specific groupings remain experimental.
 #' @param pool Character string controlling how null F-statistics are pooled
 #'   when computing empirical p-values within each block.  One of
 #'   \code{"block"} (default; null statistics from all joint components are
@@ -467,13 +497,39 @@ jackstraw_rajive <- function(ajive_output, blocks,
   attr(results, "joint_rank") <- joint_rank
   attr(results, "n_blocks")   <- K
   attr(results, "n_tests")    <- total_tests
+  attr(results, "inference_status") <-
+    "simulation_calibrated_fixed_score_approximation_v1"
+  attr(results, "pip_status") <- if (isTRUE(pip)) {
+    if (identical(pip_group, "pooled")) {
+      "simulation_calibrated_pooled_lfdr_v1"
+    } else {
+      "experimental_component_specific_pooling"
+    }
+  } else {
+    "not_requested"
+  }
+  attr(results, "calibration_scope") <- paste(
+    "fixed true joint rank; dense signal; appended independent null features;",
+    "100 deterministic simulated datasets"
+  )
 
   # ---------- PIP computation -----------------------------------------------
   if (pip) {
+    pip_fallback_count <- 0L
+    pip_nonfinite_count <- 0L
+    record_pip_diagnostics <- function(values) {
+      pip_fallback_count <<- pip_fallback_count +
+        as.integer(isTRUE(attr(values, "pi0_fallback_used")))
+      pip_nonfinite_count <<- pip_nonfinite_count +
+        as.integer(attr(values, "nonfinite_lfdr_replaced"))
+      as.numeric(values)
+    }
     if (pip_group == "pooled") {
       all_pv <- unlist(lapply(results, function(br)
         lapply(br, `[[`, "p_values")), use.names = FALSE)
-      all_pip <- .pip_from_pvalues(all_pv, pi0 = pip_pi0)
+      all_pip <- record_pip_diagnostics(
+        .pip_from_pvalues(all_pv, pi0 = pip_pi0)
+      )
       off2 <- 0L
       for (k in seq_len(K)) {
         for (j in seq_len(joint_rank)) {
@@ -486,7 +542,9 @@ jackstraw_rajive <- function(ajive_output, blocks,
       for (j in seq_len(joint_rank)) {
         pv_j <- unlist(lapply(results, function(br) br[[j]]$p_values),
                        use.names = FALSE)
-        pip_j <- .pip_from_pvalues(pv_j, pi0 = pip_pi0)
+        pip_j <- record_pip_diagnostics(
+          .pip_from_pvalues(pv_j, pi0 = pip_pi0)
+        )
         off2 <- 0L
         for (k in seq_len(K)) {
           n_k <- length(results[[k]][[j]]$p_values)
@@ -499,15 +557,150 @@ jackstraw_rajive <- function(ajive_output, blocks,
       for (k in seq_len(K)) {
         for (j in seq_len(joint_rank)) {
           pv_kj <- results[[k]][[j]]$p_values
-          results[[k]][[j]]$pip <- .pip_from_pvalues(pv_kj, pi0 = pip_pi0)
+          results[[k]][[j]]$pip <- record_pip_diagnostics(
+            .pip_from_pvalues(pv_kj, pi0 = pip_pi0)
+          )
         }
       }
     }
     attr(results, "pip_group") <- pip_group
+    attr(results, "pip_pi0_fallback_count") <- pip_fallback_count
+    attr(results, "pip_nonfinite_lfdr_count") <- pip_nonfinite_count
   }
 
   class(results) <- "jackstraw_rajive"
   results
+}
+
+#' Small-data full-refit jackstraw comparator
+#'
+#' Re-estimates the complete RaJIVE decomposition after permuting a declared
+#' number of features per block. This bounded comparator is intended for
+#' calibration of the fixed-score [jackstraw_rajive()] approximation, not for
+#' routine large-data inference.
+#'
+#' @param ajive_output Reference fit returned by [Rajive()].
+#' @param blocks Original complete Data Blocks.
+#' @param initial_signal_ranks Initial block ranks used for every refit.
+#' @param n_refits Number of independent decomposition refits.
+#' @param permuted_features Number of features permuted per block/refit.
+#' @param seed Validation seed. The caller's RNG state is restored.
+#' @param correction Multiplicity adjustment applied to feature/component
+#'   empirical p-values.
+#'
+#' @return A `rajiveplus_refit_jackstraw` list containing a compact results
+#'   table and explicit method metadata.
+#' @export
+jackstraw_refit_rajive <- function(
+    ajive_output, blocks, initial_signal_ranks, n_refits = 10L,
+    permuted_features = 1L, seed = 1L,
+    correction = c("BH", "BY", "bonferroni", "none")) {
+  correction <- match.arg(correction)
+  if (!inherits(ajive_output, "rajive") || !is.list(blocks) ||
+      length(blocks) < 2L) {
+    cli::cli_abort("A complete `rajive` fit and at least two blocks are required.")
+  }
+  n_refits <- .as_count(n_refits, "n_refits", minimum = 1L)
+  permuted_features <- .as_count(
+    permuted_features, "permuted_features", minimum = 1L
+  )
+  seed <- .as_count(seed, "seed", minimum = 0L)
+  rank <- ncol(ajive_output$joint_scores)
+  metadata <- list(
+    status = if (rank == 0L) "not_applicable_rank_zero" else
+      "experimental_full_refit_comparator",
+    rank_policy = "fixed_reference_joint_and_initial_block_ranks",
+    coordinate_alignment = "orthogonal_procrustes_to_reference_scores",
+    missing_component_policy = "retain_replicate_with_NA_statistic",
+    permuted_features_per_block = permuted_features,
+    permutation_dependence = "independent_refits_shared_within_refit",
+    pooling_family = "feature_block_component",
+    adjustment = correction,
+    rank_zero_datasets_retained = TRUE,
+    n_refits = n_refits,
+    seed = seed
+  )
+  if (rank == 0L) {
+    return(structure(
+      list(results = data.frame(), metadata = metadata),
+      class = c("rajiveplus_refit_jackstraw", "list")
+    ))
+  }
+  if (any(vapply(blocks, ncol, integer(1L)) < permuted_features)) {
+    cli::cli_abort("`permuted_features` exceeds a Data Block feature count.")
+  }
+
+  rows <- .with_validation_rng(seed, {
+    out <- vector("list", n_refits * length(blocks) * permuted_features * rank)
+    cursor <- 0L
+    for (replicate in seq_len(n_refits)) {
+      selected <- lapply(blocks, function(x) {
+        sample.int(ncol(x), permuted_features, replace = FALSE)
+      })
+      permuted <- blocks
+      for (k in seq_along(permuted)) {
+        for (feature in selected[[k]]) {
+          permuted[[k]][, feature] <- sample(permuted[[k]][, feature])
+        }
+      }
+      refit <- tryCatch(
+        Rajive(
+          permuted, initial_signal_ranks,
+          joint_rank = rank, n_wedin_samples = NA,
+          n_rand_dir_samples = NA, n_perm_samples = NA,
+          num_cores = 1L
+        ),
+        error = function(error) NULL
+      )
+      aligned <- NULL
+      if (!is.null(refit) && ncol(refit$joint_scores) >= rank) {
+        candidate <- refit$joint_scores[, seq_len(rank), drop = FALSE]
+        rotation <- .procrustes_align(ajive_output$joint_scores, candidate)
+        aligned <- candidate %*% rotation
+      }
+      for (k in seq_along(blocks)) {
+        for (feature in selected[[k]]) {
+          observed <- ols_f_stat_matrix(
+            matrix(blocks[[k]][, feature], nrow = 1L),
+            ajive_output$joint_scores[, 1L]
+          )
+          for (component in seq_len(rank)) {
+            null <- if (is.null(aligned)) NA_real_ else ols_f_stat_matrix(
+              matrix(permuted[[k]][, feature], nrow = 1L),
+              aligned[, component]
+            )
+            cursor <- cursor + 1L
+            out[[cursor]] <- data.frame(
+              replicate = replicate, block = k, feature = feature,
+              component = component,
+              observed_f = if (component == 1L) observed else
+                ols_f_stat_matrix(
+                  matrix(blocks[[k]][, feature], nrow = 1L),
+                  ajive_output$joint_scores[, component]
+                ),
+              null_f = null,
+              refit_complete = !is.null(aligned),
+              stringsAsFactors = FALSE
+            )
+          }
+        }
+      }
+    }
+    do.call(rbind, out[seq_len(cursor)])
+  })
+  keys <- interaction(rows$block, rows$feature, rows$component, drop = TRUE)
+  p_lookup <- lapply(split(rows, keys), function(group) {
+    null <- group$null_f[is.finite(group$null_f)]
+    if (!length(null)) return(NA_real_)
+    (1 + sum(null >= group$observed_f[[1L]])) / (1 + length(null))
+  })
+  rows$p_value <- as.numeric(unlist(p_lookup[as.character(keys)]))
+  rows$p_adjusted <- if (correction == "none") rows$p_value else
+    stats::p.adjust(rows$p_value, method = correction)
+  structure(
+    list(results = rows, metadata = metadata),
+    class = c("rajiveplus_refit_jackstraw", "list")
+  )
 }
 
 

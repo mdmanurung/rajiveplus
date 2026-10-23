@@ -19,6 +19,9 @@ A \code{ggplot2} object.
 Produces a stacked bar chart showing the proportion of total variance
 explained by the joint, individual, and residual components for each
 data block.
+Component energies are relative to observed data energy. Their sum need
+not be one when the fitted components have nonzero cross terms; a stacked
+display does not assert an orthogonal additive variance partition.
 }
 \examples{
 \donttest{

@@ -1,0 +1,34 @@
+{
+  "name": "non_native_vignette_diagnostic",
+  "timestamp": "2026-10-22T12:27:35.115162+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "devtools::test(filter=\"vignette-native-missing-union\", invert=TRUE, stop_on_failure=TRUE)"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_before": {
+    "commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_content_sha256": "a7dc1a4548c112d9e53dff9b791e74d18ecbc0910e63865704503671a116464a"
+  },
+  "source_after": {
+    "commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_content_sha256": "a7dc1a4548c112d9e53dff9b791e74d18ecbc0910e63865704503671a116464a"
+  },
+  "tracked_source_stable": true,
+  "timeout_s": 600,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 350.5614915360002,
+  "peak_rss_kib": 585028,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "rss_complete_for_timeout": true,
+  "log_sha256": "804171b8c913d4b52e3cf657a0adb6db7bdfd3035c102f518eed36145dde2498",
+  "resource_log_sha256": "df875bfc1437d31cf0baafdd44d850650d61516289e8d27efef06bbef79ed2dd",
+  "threads": 1,
+  "environment_overrides": {}
+}

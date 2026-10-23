@@ -1,0 +1,22 @@
+{
+  "name": "installed_reporting_smoke",
+  "timestamp": "2026-10-22T12:15:12.466038+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "library(rajiveplus, lib.loc=\"/workspace/rajive_stage0/installed\"); fx <- readRDS(\"/workspace/rajive_stage0/evidence/variance_fixture_baseline.rds\"); ref <- read.csv(\"/workspace/rajive_stage0/evidence/variance_before_after.csv\"); got <- showVarExplained_robust(fx$fit, fx$blocks); stopifnot(max(abs(got$Residual-ref$repaired_residual)) < 1e-10); print(got); print(packageVersion(\"rajiveplus\"))"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "6b44965bcfe3b9e014ffdfc0b020170eca1640b148010f1b9dd70f6a30019924",
+  "timeout_s": 60,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 0.9733079809998344,
+  "peak_rss_kib": 231816,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "54699ad85c55f40851676bf89b52d415165fae91ecedf0fd7274e78524a1b71b",
+  "resource_log_sha256": "936d3ca5d339021034370fc0bdd1d727c8860c6d22cc2b1979bcc9d75fe164a9",
+  "threads": 1,
+  "environment_overrides": {}
+}

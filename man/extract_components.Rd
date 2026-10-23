@@ -23,8 +23,8 @@ extract_components(
 \item{ajive_output}{An object of class \code{"rajive"} (output of
 \code{\link{Rajive}}).}
 
-\item{blocks}{List of original block matrices. Reserved for future
-extraction modes; currently unused.}
+\item{blocks}{List of original Data Block matrices. Required when
+\code{what = "variance"}; ignored for the other extraction modes.}
 
 \item{source}{Character. One of \code{"rajive"} (default) or
 \code{"jackstraw"}.  Selects the result object to extract from.

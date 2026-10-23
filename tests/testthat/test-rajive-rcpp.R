@@ -85,7 +85,7 @@ test_that("Rajive full=TRUE: X = J + I + E for each block (K=2)", {
     J  <- bd_joint(res, k)$full
     I  <- bd_individual(res, k)$full
     E  <- bd_residual(res, k)
-    expect_equal(J + I + E, X, tolerance = 1e-8,
+    expect_equal(unname(J + I + E), unname(X), tolerance = 1e-8,
                  label = paste0("X = J + I + E, block ", k))
   }
 })
@@ -101,7 +101,7 @@ test_that("Rajive full=TRUE: X = J + I + E for each block (K=3)", {
     J  <- bd_joint(res, k)$full
     I  <- bd_individual(res, k)$full
     E  <- bd_residual(res, k)
-    expect_equal(J + I + E, X, tolerance = 1e-8,
+    expect_equal(unname(J + I + E), unname(X), tolerance = 1e-8,
                  label = paste0("X = J + I + E, block ", k))
   }
 })

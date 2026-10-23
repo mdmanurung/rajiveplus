@@ -48,6 +48,42 @@
   }
 }
 
+#' Drop candidate joint directions that a Data Block barely supports
+#'
+#' A candidate joint direction is rejected when any Data Block has a trivial
+#' projection of it onto that block's features, relative to that block's signal
+#' threshold. Every block tests every candidate, so a block with several
+#' unsupported directions contributes all of them.
+#'
+#' @param blocks List of numeric Data Block matrices, samples by features.
+#' @param joint_scores Matrix whose columns are candidate joint directions.
+#' @param sv_thresholds Numeric vector of per-block signal thresholds.
+#' @param identifiability_norm One of `"l2"` or `"l1"`.
+#' @param quiet Logical; suppress the per-rejection message.
+#'
+#' @return Integer vector of rejected candidate indices, sorted and unique.
+#' @noRd
+.identifiability_filter <- function(blocks, joint_scores, sv_thresholds,
+                                    identifiability_norm, quiet = FALSE) {
+  n_candidates <- ncol(joint_scores)
+  to_remove <- integer(0L)
+
+  for (k in seq_along(blocks)) {
+    for (j in seq_len(n_candidates)) {
+      score <- t(blocks[[k]]) %*% joint_scores[, j]
+      sv <- .identifiability_projection_norm(score, identifiability_norm)
+      if (sv < sv_thresholds[[k]]) {
+        if (!quiet) {
+          message("removing column ", j)
+        }
+        to_remove <- c(to_remove, as.integer(j))
+      }
+    }
+  }
+
+  sort(unique(to_remove))
+}
+
 .match_identifiability_norm <- function(identifiability_norm) {
   tryCatch(
     match.arg(identifiability_norm, c("l2", "l1")),
@@ -58,6 +94,43 @@
       )
     }
   )
+}
+
+# The Wedin joint threshold is computed and reported, but is not part of the
+# default decision rule. The across-block combination in the frozen profile is
+# `K - sum(per-block bounds)`, which has never been verified against a pinned
+# upstream reference, and the per-block Wedin draw reduction it consumes was
+# dimensionally invalid until it was reduced to one bound per block. Measured on
+# the standard three-block fixture, the resulting threshold is nearly constant at
+# roughly 2.8 and rejects true joint ranks 1 and 2 outright, while the
+# random-direction bound separates those cases correctly at a 0/6 Type-I rate.
+# The Wedin bound therefore stays diagnostic until its combination rule is
+# re-derived; see audits/DEFECT_REGISTER.md rows W1-W3.
+.wedin_participates_in_default <- function() {
+  isTRUE(getOption("rajiveplus.wedin_in_default_threshold", FALSE))
+}
+
+.inform_wedin_diagnostic_only <- function() {
+  if (.wedin_participates_in_default()) {
+    return(invisible(NULL))
+  }
+  opt <- "rajiveplus.wedin_diagnostic_informed"
+  if (!isTRUE(getOption(opt, FALSE))) {
+    cli::cli_inform(c(
+      "i" = paste0(
+        "The Wedin bound is reported in {.field fit$joint_rank_sel$wedin} ",
+        "but is excluded from the default joint-rank threshold."
+      ),
+      "i" = paste0(
+        "Its across-block combination is unverified against a pinned upstream ",
+        "reference. Set ",
+        "{.code options(rajiveplus.wedin_in_default_threshold = TRUE)} to ",
+        "include it."
+      )
+    ))
+    options(rajiveplus.wedin_diagnostic_informed = TRUE)
+  }
+  invisible(NULL)
 }
 
 
@@ -173,6 +246,11 @@
 #' joint-rank estimate and loadings in proportion to the raw scale
 #' differences (JIVE convention; see Lock et al. 2013,
 #' \emph{Ann. Appl. Statist.} 7(1):523--542).
+#' The estimator itself applies neither; the active policy is recorded in the
+#' method profile (\code{preprocessing_centering} /
+#' \code{preprocessing_scaling}). Blocks whose column-mean offset carries
+#' more than half of the block's total variance trigger a documented warning
+#' (class \code{rajiveplus_uncentered_blocks}) naming the offending blocks.
 #'
 #' @section Permutation and paired designs:
 #' When \code{n_perm_samples} is supplied, the joint-rank threshold is
@@ -254,6 +332,27 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   identifiability_norm <- .match_identifiability_norm(identifiability_norm)
   missing <- match.arg(missing)
   uncertainty <- match.arg(uncertainty)
+  blocks <- .validate_data_blocks(blocks, allow_missing = missing == "native")
+  controls <- .validate_fit_controls(
+    blocks = blocks,
+    initial_signal_ranks = initial_signal_ranks,
+    full = full,
+    n_wedin_samples = n_wedin_samples,
+    n_rand_dir_samples = n_rand_dir_samples,
+    joint_rank = joint_rank,
+    n_perm_samples = n_perm_samples,
+    num_cores = num_cores,
+    seed = seed,
+    allow_native_rank = missing == "native"
+  )
+  initial_signal_ranks <- controls$initial_signal_ranks
+  full <- controls$full
+  n_wedin_samples <- controls$n_wedin_samples
+  n_rand_dir_samples <- controls$n_rand_dir_samples
+  joint_rank <- controls$joint_rank
+  n_perm_samples <- controls$n_perm_samples
+  num_cores <- controls$num_cores
+  seed <- controls$seed
   if (identifiability_norm_defaulted) {
     .inform_identifiability_norm_default()
   }
@@ -340,50 +439,29 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
                          rank_only=FALSE) {
 
   identifiability_norm <- .match_identifiability_norm(identifiability_norm)
-  num_cores <- max(1L, as.integer(num_cores))
-  if (!is.na(seed)) set.seed(as.integer(seed))
-
-  # Abort early with clear classes/messages for invalid inputs.
-  if (!is.list(blocks) || length(blocks) < 1L) {
-    cli::cli_abort(
-      c("`blocks` must be a non-empty list of numeric matrices."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (length(initial_signal_ranks) != length(blocks)) {
-    cli::cli_abort(
-      c("`initial_signal_ranks` must have one entry per block.",
-        "x" = "Got {.val {length(initial_signal_ranks)}} ranks for {.val {length(blocks)}} blocks."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (!all(vapply(blocks, is.matrix, logical(1L)))) {
-    cli::cli_abort(
-      c("Every element of `blocks` must be a matrix."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-  if (!all(vapply(blocks, function(x) all(is.finite(x)), logical(1L)))) {
-    cli::cli_abort(
-      c("All entries of each block must be finite (no NA/NaN/Inf)."),
-      class = "rajiveplus_invalid_input"
-    )
-  }
-
-  blocks <- lapply(seq_along(blocks), function(k) {
-    x <- blocks[[k]]
-    bad_cols <- apply(x, 2L, stats::sd) < .Machine$double.eps^0.5
-    if (any(bad_cols)) {
-      cli::cli_warn(
-        c("Degenerate column(s) in block {.val {k}} dropped automatically.",
-          "i" = "{.val {sum(bad_cols)}} column(s) with near-zero variance removed."),
-        class = "rajiveplus_degenerate_block"
-      )
-      x[, !bad_cols, drop = FALSE]
-    } else {
-      x
-    }
-  })
+  blocks <- .validate_data_blocks(blocks, allow_missing = FALSE)
+  prepared <- .prepare_complete_blocks(blocks)
+  blocks <- prepared$blocks
+  controls <- .validate_fit_controls(
+    blocks = blocks,
+    initial_signal_ranks = initial_signal_ranks,
+    full = full,
+    n_wedin_samples = n_wedin_samples,
+    n_rand_dir_samples = n_rand_dir_samples,
+    joint_rank = joint_rank,
+    n_perm_samples = n_perm_samples,
+    num_cores = num_cores,
+    seed = seed
+  )
+  initial_signal_ranks <- controls$initial_signal_ranks
+  full <- controls$full
+  n_wedin_samples <- controls$n_wedin_samples
+  n_rand_dir_samples <- controls$n_rand_dir_samples
+  joint_rank <- controls$joint_rank
+  n_perm_samples <- controls$n_perm_samples
+  num_cores <- controls$num_cores
+  seed <- controls$seed
+  if (!is.na(seed)) set.seed(seed)
 
   n_obs <- nrow(blocks[[1L]])
   if (n_obs < sum(initial_signal_ranks)) {
@@ -454,15 +532,17 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
   joint_scores <- out$joint_scores
 
   joint_rank <- dim(joint_scores)[2]
+  method_profile <- .resolve_method_profile(
+    "RJP-BASE", identifiability_norm
+  )
 
   if (isTRUE(rank_only)) {
-    rank_decomposition <- list(
+    return(.new_rajive_rank_only(
       joint_scores = joint_scores,
       joint_rank = joint_rank,
-      joint_rank_sel = joint_rank_sel_results
-    )
-    class(rank_decomposition) <- "rajive_rank_only"
-    return(rank_decomposition)
+      joint_rank_sel = joint_rank_sel_results,
+      method_profile = method_profile
+    ))
   }
 
   # step 3: final decomposition -----------------------------------------------------
@@ -475,15 +555,22 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
       full = full
     ), blocks, sv_thresholds)
 
+  block_decomps <- .restore_component_features(
+    block_decomps,
+    original_blocks = prepared$original_blocks,
+    feature_map = prepared$feature_map
+  )
 
 
-  jive_decomposition <- list(block_decomps=block_decomps)
-  jive_decomposition[['joint_scores']] <- joint_scores
-  jive_decomposition[['joint_rank']] <- joint_rank
 
-  jive_decomposition[['joint_rank_sel']] <- joint_rank_sel_results
-  class(jive_decomposition) <- "rajive"
-  jive_decomposition
+  .new_rajive(
+    block_decomps = block_decomps,
+    joint_scores = joint_scores,
+    joint_rank = joint_rank,
+    joint_rank_sel = joint_rank_sel_results,
+    feature_map = prepared$feature_map,
+    method_profile = method_profile
+  )
 }
 
 
@@ -507,12 +594,21 @@ Rajive <- function(blocks, initial_signal_ranks, full=TRUE,
 #' strictly less than \code{min(nrow(X), ncol(X))} for each block.
 
 get_sv_threshold <- function(singular_values, rank){
+  # Identifiability semantics: a joint direction is "trivially projected" in a
+  # block when its projection norm is indistinguishable from noise. The noise
+  # floor is the first singular value past the retained signal rank (the
+  # largest observed noise singular value), so a direction above it exceeds
+  # every observed noise direction. The previous midpoint
+  # 0.5 * (d[rank] + d[rank + 1]) additionally required joint directions to be
+  # as strong as the weakest RETAINED individual direction, which rejected
+  # demonstrably non-trivial joint components (register defect R1: rank-2
+  # exact recovery 0.36 with knife-edge filter drops).
   # When rank == length(singular_values) there is no rank+1 entry; use half
   # the last singular value (midpoint to the implicit floor at 0) to avoid NA.
   if (rank == length(singular_values)) {
     0.5 * singular_values[rank]
   } else {
-    0.5 * (singular_values[rank] + singular_values[rank + 1L])
+    singular_values[rank + 1L]
   }
 }
 
@@ -557,13 +653,37 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
   n_obs <- dim(blocks[[1]])[1]
 
   # SVD of the signal scores matrix -----------------------------------------
+  # Defect G1 fix: AJIVE geometry treats the per-block score matrices as
+  # orthonormal bases of the estimated signal subspaces. The robust SVD does
+  # not guarantee orthonormality of its retained factors, so each retained
+  # block basis is re-orthonormalized with a rank-revealing pass before
+  # stacking. Rank-deficient bases are truncated with a warning and the stack
+  # capacity follows the achieved ranks.
   signal_scores <- list()
+  block_basis_ranks <- integer(K)
   for(k in 1:K){
-    signal_scores[[k]] <- block_svd[[k]][['u']][, 1:initial_signal_ranks[k], drop = FALSE]
+    U <- block_svd[[k]][['u']][, 1:initial_signal_ranks[k], drop = FALSE]
+    Q <- .rank_revealing_basis(U)
+    block_basis_ranks[k] <- ncol(Q)
+    if(block_basis_ranks[k] < initial_signal_ranks[k]){
+      warning(sprintf(paste0("Block %d: the retained robust score basis is ",
+                             "numerically rank deficient (%d of %d directions ",
+                             "retained after orthonormalization)."),
+                      k, block_basis_ranks[k], initial_signal_ranks[k]),
+              call. = FALSE, immediate. = TRUE)
+    }
+    signal_scores[[k]] <- Q
+  }
+
+  if(min(block_basis_ranks) == 0L){
+    cli::cli_abort(
+      "All retained block score bases are numerically rank deficient; the joint fit is degenerate.",
+      class = "rajiveplus_degenerate_basis"
+    )
   }
 
   M <- do.call(cbind, signal_scores)
-  M_svd <- get_svd_robustH(M, rank=min(initial_signal_ranks))
+  M_svd <- get_svd_robustH(M, rank=min(block_basis_ranks))
 
 
   # estimate joint rank with wedin bound and random direction bound -------------------------------------------------------------
@@ -579,20 +699,39 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
 
       # NOTE: use explicit loop (not mapply) so each block gets its own
       # signal_rank correctly, avoiding variable-capture from the outer loop.
-      block_wedin_samples <- t(do.call(rbind, lapply(seq_along(blocks), function(k)
+      #
+     # `get_wedin_bound_samples()` returns `n_wedin_samples` independent draws
+      # per block, each in [0, 1]. The across-block aggregation below consumes
+      # one bound per block, so the draws are reduced with the same 5% quantile
+      # the threshold is taken at. Reducing per draw instead summed the whole
+      # draw vector and produced a large negative "squared singular value"
+      # threshold, which made the Wedin term unreachable under
+      # `max(wedin, rand_dir, perm)`.
+      block_wedin_draws <- lapply(seq_along(blocks), function(k)
         get_wedin_bound_samples(blocks[[k]],
                                 block_svd[[k]],
                                 signal_rank=initial_signal_ranks[k],
                                 num_samples=n_wedin_samples,
-                                num_cores=num_cores))))
+                                num_cores=num_cores))
 
+      block_wedin_bounds <- vapply(block_wedin_draws, stats::quantile,
+                                  numeric(1L), probs = .05, names = FALSE)
+      block_wedin_samples <- matrix(block_wedin_bounds, nrow = 1L)
 
+      wedin_samples <- K - sum(block_wedin_bounds)
+      wedin_svsq_threshold <- wedin_samples
 
-
-      wedin_samples <-  K - colSums(block_wedin_samples)
-      wedin_svsq_threshold <- quantile(wedin_samples, .05)
+      if (!is.finite(wedin_svsq_threshold) || wedin_svsq_threshold < 0) {
+        cli::cli_abort(c(
+          "The Wedin joint-rank threshold is not a valid squared magnitude.",
+          "i" = "Got {wedin_svsq_threshold} from K = {K} block bounds.",
+          "i" = paste0("Per-block Wedin bounds: ",
+                       paste(signif(block_wedin_bounds, 4), collapse = ", "), ".")
+        ), class = "rajiveplus_wedin_threshold_invalid")
+      }
 
       rank_sel_results[['wedin']] <- list(block_wedin_samples=block_wedin_samples,
+                                          block_wedin_bounds=block_wedin_bounds,
                                           wedin_samples=wedin_samples,
                                           wedin_svsq_threshold=wedin_svsq_threshold)
     } else{
@@ -628,10 +767,22 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
                                              rand_dir_svsq_threshold = rand_dir_svsq_threshold)
     }
 
-    overall_sv_sq_threshold <- max(wedin_svsq_threshold, rand_dir_svsq_threshold,
+    if (!.wedin_participates_in_default() && is.finite(wedin_svsq_threshold)) {
+      .inform_wedin_diagnostic_only()
+      wedin_svsq_threshold_effective <- NA
+    } else {
+      wedin_svsq_threshold_effective <- wedin_svsq_threshold
+    }
+
+    overall_sv_sq_threshold <- max(wedin_svsq_threshold_effective,
+                                   rand_dir_svsq_threshold,
                                    perm_svsq_threshold, na.rm = TRUE)
     joint_rank_estimate <- sum(M_svd[['d']]^2 > overall_sv_sq_threshold)
 
+    if (!is.null(rank_sel_results[['wedin']])) {
+      rank_sel_results[['wedin']][['participates_in_threshold']] <-
+        .wedin_participates_in_default()
+    }
     rank_sel_results[['overall_sv_sq_threshold']] <- overall_sv_sq_threshold
     rank_sel_results[['joint_rank_estimate']] <- joint_rank_estimate
 
@@ -644,34 +795,34 @@ get_joint_scores_robustH <- function(blocks, block_svd, initial_signal_ranks, sv
 
   # estimate joint score space ------------------------------------
 
+  raw_joint_scores <- M_svd[['u']][ , seq_len(joint_rank_estimate), drop=FALSE]
 
-  joint_scores <- M_svd[['u']][ , seq_len(joint_rank_estimate), drop=FALSE]
+  # Defect G1 fix (continued): the stacked aggregation does not guarantee that
+  # its selected factors are orthonormal either. Canonicalise the selected
+  # joint basis before the identifiability filter, because the filter's
+  # projection norms and the downstream projector I - Q Q' both assume an
+  # orthonormal Q. For orthonormal block bases the squared singular values of
+  # the stack equal the eigenvalues of the summed block projectors, so the
+  # rank-selection statistic is unchanged in meaning.
+  joint_scores <- .rank_revealing_basis(raw_joint_scores)
+  canonical_rank_drop <- joint_rank_estimate - ncol(joint_scores)
 
   # reconsider joint score space ------------------------------------
   # remove columns of joint_scores that have a
   # trivial projection from one of the data matrices
 
-  to_remove <- c()
-  for(k in seq_len(K)){
-    for(j in seq_len(joint_rank_estimate)){
-
-      score <- t(blocks[[k]]) %*% joint_scores[ , j]
-      sv <- .identifiability_projection_norm(score, identifiability_norm)
-
-      if(sv < sv_thresholds[[k]]){
-        message('removing column ', j)
-        to_remove <- c(to_remove, j)
-        break
-      }
-    }
-
-  }
-  to_keep <- setdiff(seq_len(joint_rank_estimate), to_remove)
+  to_remove <- .identifiability_filter(
+    blocks = blocks,
+    joint_scores = joint_scores,
+    sv_thresholds = sv_thresholds,
+    identifiability_norm = identifiability_norm
+  )
+  to_keep <- setdiff(seq_len(ncol(joint_scores)), to_remove)
   joint_rank <- length(to_keep)
   joint_scores <- joint_scores[ , to_keep, drop=FALSE]
 
-  rank_sel_results[['identif_dropped']] <- if (length(to_remove) > 0L)
-    sort(unique(to_remove)) else integer(0L)
+  rank_sel_results[['identif_dropped']] <- to_remove
+  rank_sel_results[['canonical_rank_drop']] <- canonical_rank_drop
 
   list(joint_scores=joint_scores, rank_sel_results=rank_sel_results)
 }
@@ -707,17 +858,32 @@ get_final_decomposition_robustH <- function(X, joint_scores, sv_threshold, full=
 
 #' Computes the individual matrix for a data block.
 #'
+#' The retained robust factors of the joint-complement residual are rank-frozen,
+#' projected onto the joint complement, and refactorized with an exact algebraic
+#' SVD (no second robust fit), so the Individual component cannot leak joint
+#' variation (defect G2).
+#'
 #' @param X Matrix. The original data matrix.
 #' @param joint_scores Matrix. The basis of the joint space (dimension n x joint_rank).
 #' @param sv_threshold Numeric vector. The singular value thresholds from the initial signal rank estimates.
 #' @param full Boolean. Do we compute the full J, I matrices or just the SVD (set to FALSE to save memory).
+#' @param constraint Character. \code{"joint_complement"} (default) projects the
+#'   selected reconstruction onto the joint complement before refactorization;
+#'   \code{"none"} keeps the legacy unconstrained robust refit (experimental
+#'   ablation adapter only).
 
-get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, full=TRUE){
+get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold,
+                                                 full=TRUE,
+                                                 constraint = c("joint_complement",
+                                                                "none")){
+
+  constraint <- match.arg(constraint)
 
   # When joint_rank == 0 (after identifiability filtering), there is no
   # joint subspace to project out: X_orthog == X.  Avoid forming an empty
   # n x 0 / 0 x n product and the n x n identity.
-  if (is.null(joint_scores) || ncol(joint_scores) == 0L) {
+  no_joint <- is.null(joint_scores) || ncol(joint_scores) == 0L
+  if (no_joint) {
     X_orthog <- X
   } else {
     # Avoid building the full n x n projector: I - U U^T applied to X is
@@ -726,17 +892,38 @@ get_individual_decomposition_robustH <- function(X, joint_scores, sv_threshold, 
   }
 
   indiv_decomposition <- get_svd_robustH(X_orthog)
-
   indiv_rank <- sum(indiv_decomposition[['d']] > sv_threshold)
-
   indiv_decomposition <- truncate_svd(decomposition=indiv_decomposition,
                                       rank=indiv_rank)
+
+  # Defect G2 fix: the robust refit of the joint-complement residual is not
+  # itself constrained to the complement, so joint variation can leak back
+  # into the Individual component. Freeze the selected rank first, project the
+  # selected reconstruction onto the joint complement, and refactorize with an
+  # exact algebraic SVD -- no second robust fit. `constraint = "none"` keeps
+  # the legacy unconstrained refit for the experimental ablation adapter.
+  if (!no_joint && constraint == "joint_complement") {
+    selected_full <- svd_reconstruction(indiv_decomposition)
+    projected <- selected_full -
+      joint_scores %*% (t(joint_scores) %*% selected_full)
+    refit <- svd(projected, nu = min(dim(projected)), nv = min(dim(projected)))
+    # Scale to the preconstraint matrix as well: an exactly removed fit must
+    # not acquire a spurious rank by normalizing roundoff to its own tiny norm.
+    tolerance <- max(dim(projected)) * .Machine$double.eps *
+      max(max(indiv_decomposition[['d']], 0), max(refit$d, 0))
+    indiv_rank <- min(indiv_rank, sum(refit$d > tolerance))
+    indiv_decomposition <- list(
+      u = refit$u[, seq_len(indiv_rank), drop = FALSE],
+      d = refit$d[seq_len(indiv_rank)],
+      v = refit$v[, seq_len(indiv_rank), drop = FALSE]
+    )
+  }
+
   if(full){
     indiv_decomposition[['full']] <- svd_reconstruction(indiv_decomposition)
   } else{
     indiv_decomposition[['full']] <- NA
   }
-
   indiv_decomposition[['rank']] <- indiv_rank
   indiv_decomposition
 }

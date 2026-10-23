@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "r_files": 20,
+  "top_level_expressions": 248,
+  "changed_expressions": [
+    {
+      "file": "R/Rajive_helpfunctions.R",
+      "expression": 15,
+      "function_name": "showVarExplained_robust",
+      "formals_unchanged": true
+    }
+  ],
+  "native_source_unchanged": true,
+  "interpretation": "Only one parsed R production expression changed; its public formals are unchanged. Other differences in R/ are documentation comments."
+}

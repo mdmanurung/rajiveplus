@@ -1,0 +1,44 @@
+{
+  "name": "check_diagnostic",
+  "timestamp": "2026-10-22T12:19:36.951844+00:00",
+  "command": [
+    "R",
+    "CMD",
+    "check",
+    "--as-cran",
+    "--no-manual",
+    "--no-tests",
+    "--no-examples",
+    "--no-vignettes",
+    "--ignore-vignettes",
+    "--output=/workspace/rajive_stage0/check_diagnostic",
+    "rajiveplus_0.1.0.tar.gz"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+  "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_before": {
+    "commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_content_sha256": "a7dc1a4548c112d9e53dff9b791e74d18ecbc0910e63865704503671a116464a"
+  },
+  "source_after": {
+    "commit": "906b0c0afd107717e96dd6b3813271a5b6bc61cc",
+    "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "tracked_content_sha256": "a7dc1a4548c112d9e53dff9b791e74d18ecbc0910e63865704503671a116464a"
+  },
+  "tracked_source_stable": true,
+  "timeout_s": 300,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 73.49271702999977,
+  "peak_rss_kib": 584372,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "rss_complete_for_timeout": true,
+  "log_sha256": "e792d317e3bfe56931dadcc82d1138be6e9fbf7500c23146bc3784828d2909b5",
+  "resource_log_sha256": "9cc93b434938d9d9438993c1eb691f03627b025659b316d1319c9d0373722701",
+  "threads": 1,
+  "environment_overrides": {
+    "_R_CHECK_FORCE_SUGGESTS_": "false"
+  }
+}

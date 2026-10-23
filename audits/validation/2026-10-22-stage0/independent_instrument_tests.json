@@ -1,0 +1,22 @@
+{
+  "name": "independent_instrument_tests",
+  "timestamp": "2026-10-22T12:04:08.963951+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "devtools::test(filter=\"validation-generator|identifiability-all-rejections|wedin-threshold-arithmetic|wedin-reference\", stop_on_failure=TRUE)"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "92fcdc6327326645260288f74ca2f6773e6e6be0f7016efce703b1a0d8bb6337",
+  "timeout_s": 180,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 61.02597108000009,
+  "peak_rss_kib": 302328,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "2527d491e4e015bffc7ee634384c2442281de2e3d80d635c5f50cdc7f78aaa09",
+  "resource_log_sha256": "0d9326d9c2ac8342ca49c351bb78f082d648d1d2ef575c1ef54a8a7e032fa104",
+  "threads": 1,
+  "environment_overrides": {}
+}

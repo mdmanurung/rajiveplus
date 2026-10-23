@@ -1,15 +1,37 @@
 Package: rajiveplus
-Title: RAJIVE+
+Title: Robust Angle-Based Joint and Individual Variation Explained (RAJIVE+)
 Version: 0.1.0
 Authors@R: c(
     person(given = "Mikhael",
            family = "Manurung",
            role = c("aut", "cre"),
-           email = "m.d.manurung@lumc.nl"))
-Description: Implements Robust Angle-based Joint and Individual Variation Explained (RAJIVE) for matched multi-view data. Provides robust singular value decomposition, joint and individual component estimation, diagnostic visualization, feature-level jackstraw testing, metadata association, and stability summaries.
+           email = "m.d.manurung@lumc.nl"),
+    person(given = "Erica",
+           family = "Ponzi",
+           role = "ctb",
+           comment = "Author of the original RaJIVE implementation"),
+    person(given = "Abhik",
+           family = "Ghosh",
+           role = "ctb",
+           comment = "Author of the original RaJIVE implementation"),
+    person(given = "Magne",
+           family = "Thoresen",
+           role = "ctb",
+           comment = "Author of the original RaJIVE implementation"),
+    person(given = "Mikhael",
+           family = "Manurung",
+           role = "cph"))
+Description: Implements the Robust Angle-based Joint and Individual Variation
+    Explained (RAJIVE) estimator for matched multi-view data, extending the
+    original RaJIVE method of Ponzi et al. (2021)
+    <doi:10.48550/arXiv.2101.09110>. Provides robust singular value
+    decomposition, joint and individual component estimation, diagnostic
+    visualization, feature-level jackstraw-style testing, metadata association,
+    and stability summaries. Native missing-data fitting and fixed-score
+    jackstraw inference are experimental.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Depends: R (>= 3.1.0)
+Depends: R (>= 4.1.0)
 Suggests:
     knitr,
     rmarkdown,
@@ -17,7 +39,6 @@ Suggests:
     cowplot,
     reshape2,
     dplyr,
-    pkgdown,
     bench,
     microbenchmark,
     peakRAM,
@@ -30,19 +51,23 @@ Suggests:
     pheatmap,
     ggrepel,
     patchwork,
+    RaJIVE,
     remotes,
-    qvalue
+    qvalue,
+    tibble,
+    tidyr,
+    jsonlite
 VignetteBuilder: knitr
 Imports: ggplot2,
-	doParallel,
+    doParallel,
     doRNG,
-	foreach,
+    foreach,
     cli,
-	stats,
-	Rcpp,
-	parallel,
+    stats,
+    Rcpp,
+    parallel,
     withr
 LinkingTo: Rcpp, RcppArmadillo
 URL: https://mdmanurung.github.io/rajiveplus/
 BugReports: https://github.com/mdmanurung/rajiveplus/issues
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.1

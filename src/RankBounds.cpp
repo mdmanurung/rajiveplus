@@ -28,8 +28,9 @@ arma::vec wedin_bound_resampling_cpp_draws(
     if (draws.n_rows != signal_basis.n_rows) {
         Rcpp::stop("`draws` first dimension must equal nrow(signal_basis).");
     }
-    if (draws.n_cols != signal_basis.n_cols) {
-        Rcpp::stop("`draws` second dimension must equal ncol(signal_basis).");
+    if (draws.n_cols == 0 ||
+        draws.n_cols > signal_basis.n_rows - signal_basis.n_cols) {
+        Rcpp::stop("`draws` second dimension must fit the orthogonal complement.");
     }
 
     for (arma::uword s = 0; s < n_samples; ++s) {

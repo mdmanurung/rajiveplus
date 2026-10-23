@@ -32,11 +32,48 @@ skip_if_not_slow <- function() {
 #'
 #' @return The value of `expr`.
 with_lecuyer_seed <- function(seed, expr) {
+  seed_exists <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  if (seed_exists) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  }
   prev_kind <- RNGkind()
-  RNGkind("L'Ecuyer-CMRG")
-  set.seed(seed)
-  on.exit(do.call(RNGkind, as.list(prev_kind)), add = TRUE)
+  on.exit({
+    do.call(RNGkind, as.list(prev_kind))
+    if (seed_exists) {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  set.seed(as.integer(seed))
   force(expr)
+}
+
+# Run independently seeded calibration replicates without coupling results to
+# worker scheduling or another replicate's random-number consumption.
+calibration_lapply <- function(items, fun) {
+  cores <- suppressWarnings(as.integer(
+    Sys.getenv("RAJIVE_CALIBRATION_CORES", "1")
+  ))
+  if (length(cores) != 1L || is.na(cores) || cores < 1L) cores <- 1L
+  cores <- min(cores, length(items))
+  if (.Platform$OS.type != "windows" && cores > 1L) {
+    parallel::mclapply(items, fun, mc.cores = cores, mc.set.seed = FALSE)
+  } else {
+    lapply(items, fun)
+  }
+}
+
+write_calibration_evidence <- function(rows, filename) {
+  gate_dir <- Sys.getenv("RAJIVE_GATE_DIR", unset = "")
+  if (!nzchar(gate_dir)) return(invisible(NULL))
+  dir.create(gate_dir, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(gate_dir, filename)
+  utils::write.table(
+    rows, path, sep = "\t", quote = TRUE, row.names = FALSE, na = "NA"
+  )
+  invisible(path)
 }
 
 # ---------------------------------------------------------------------------
@@ -93,10 +130,13 @@ signal_blocks <- function(K, n, pks, rankJ, rankA, sd_noise = 1, seed = 42L) {
 #'
 #' @return n x r matrix whose columns lie in the column space of perp_basis.
 haar_perp_sample <- function(perp_basis, r) {
+  if (r > ncol(perp_basis)) {
+    stop("`r` cannot exceed the complement dimension.", call. = FALSE)
+  }
   nr <- nrow(perp_basis)
-  Q  <- qr.Q(qr(matrix(stats::rnorm(nr * r), nr, r)))
-  # Project Q onto the perp subspace
-  perp_basis %*% (t(perp_basis) %*% Q)
+  raw <- matrix(stats::rnorm(nr * r), nr, r)
+  projected <- perp_basis %*% crossprod(perp_basis, raw)
+  qr.Q(qr(projected), complete = FALSE)[, seq_len(r), drop = FALSE]
 }
 
 # ---------------------------------------------------------------------------
@@ -196,4 +236,47 @@ signal_blocks_clustered <- function(K, n_clusters, obs_per_cluster, pks,
 binom_ci <- function(p, B, sd_mult = 3) {
   sd <- sqrt(p * (1 - p) / B)
   c(low = p - sd_mult * sd, high = p + sd_mult * sd)
+}
+
+# ---------------------------------------------------------------------------
+# rank_recovery_summary
+# ---------------------------------------------------------------------------
+
+#' Summarise joint-rank recovery without rewarding overestimation
+#'
+#' The previous power metric scored `estimated >= true`, so selecting too many
+#' components counted as a success. That hides a real failure mode: an
+#' over-selected rank produces spurious joint components that are then carried
+#' into inference. Exact, under, and over are reported separately and every fit
+#' stays in the denominator.
+#'
+#' @param estimated Integer or numeric vector of estimated joint ranks.
+#' @param true_rank Integer. The generating joint rank.
+#'
+#' @return A list with `exact`, `under`, `over`, `mean_estimated`, `n`, and the
+#'   binomial standard error of the exact rate.
+#' @noRd
+rank_recovery_summary <- function(estimated, true_rank) {
+  estimated <- as.numeric(estimated)
+  n <- length(estimated)
+  exact <- mean(estimated == true_rank)
+  list(
+    true_rank = as.integer(true_rank),
+    exact = exact,
+    under = mean(estimated < true_rank),
+    over = mean(estimated > true_rank),
+    mean_estimated = mean(estimated),
+    n = n,
+    mc_se = sqrt(exact * (1 - exact) / n)
+  )
+}
+
+#' Format a rank-recovery summary for gate output
+#' @noRd
+format_rank_recovery <- function(summary) {
+  sprintf(
+    "true=%d exact=%.4f (mc_se=%.4f) under=%.4f over=%.4f mean_est=%.3f B=%d",
+    summary$true_rank, summary$exact, summary$mc_se, summary$under,
+    summary$over, summary$mean_estimated, summary$n
+  )
 }

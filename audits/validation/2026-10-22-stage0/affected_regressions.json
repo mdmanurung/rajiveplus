@@ -1,0 +1,22 @@
+{
+  "name": "affected_regressions",
+  "timestamp": "2026-10-22T12:04:03.235362+00:00",
+  "command": [
+    "Rscript",
+    "-e",
+    "devtools::test(filter=\"variance|varexplained|extractors|audit-fortify|result-object-schema|rajive-rng\", stop_on_failure=TRUE)"
+  ],
+  "cwd": "/workspace/rajive_stage0/repair",
+  "source_commit": "4817b7657dfe78430ce51ea42c877b1dcff478c8",
+  "tracked_diff_sha256": "92fcdc6327326645260288f74ca2f6773e6e6be0f7016efce703b1a0d8bb6337",
+  "timeout_s": 180,
+  "exit_code": 0,
+  "status": "PASS",
+  "wall_time_s": 5.711221330000171,
+  "peak_rss_kib": 293324,
+  "memory_scope": "maximum resident set of a child, not summed concurrent process-tree peak",
+  "log_sha256": "33ffa45388d56867d1148821501fee9685e6614090596e197e192e5b28570793",
+  "resource_log_sha256": "7d049f472fcbae15d7c0e86c35b4555fceb7b7e535977d0e0f6a9f489d009dfa",
+  "threads": 1,
+  "environment_overrides": {}
+}

@@ -148,6 +148,14 @@ test_that("pip_group = 'pooled' gives consistent shapes", {
                                               pip_group = "pooled"))
 
   expect_equal(attr(js, "pip_group"), "pooled")
+  expect_identical(
+    attr(js, "pip_status"), "simulation_calibrated_pooled_lfdr_v1"
+  )
+  expect_identical(
+    attr(js, "inference_status"),
+    "simulation_calibrated_fixed_score_approximation_v1"
+  )
+  expect_match(attr(js, "calibration_scope"), "100 deterministic")
   for (k in seq_len(attr(js, "n_blocks"))) {
     for (j in seq_len(attr(js, "joint_rank"))) {
       expect_equal(
@@ -215,4 +223,14 @@ test_that("pip_pi0 is forwarded to qvalue::lfdr()", {
     js_auto$block1$comp1$pip,
     js_pi0$block1$comp1$pip
   )))
+})
+
+test_that("automatic PIP estimation has a conservative discrete-p fallback", {
+  skip_if_not_installed("qvalue")
+
+  pip <- rajiveplus:::.pip_from_pvalues(rep(0.5, 50L))
+  expect_true(all(is.finite(pip)))
+  expect_true(all(pip >= 0 & pip <= 1))
+  expect_true(isTRUE(attr(pip, "pi0_fallback_used")))
+  expect_identical(attr(pip, "nonfinite_lfdr_replaced"), 0L)
 })

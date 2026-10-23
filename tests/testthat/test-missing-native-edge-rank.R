@@ -43,16 +43,15 @@ test_that("joint_rank = 0 collapses estimability to not_identifiable", {
   expect_true(all(est$label[est$row == 1L] == "not_identifiable"))
 })
 
-test_that("joint_rank truncation warns when the request exceeds recoverable dim", {
+test_that("joint_rank outside the declared signal-rank bound fails early", {
   ub <- make_union_blocks(n = 18L, n_features = c(8L, 8L, 8L))
-  # initial_signal_ranks = 1 per block -> concatenated signal matrix has 3
-  # columns, so joint_rank = 5 is not recoverable.
-  expect_warning(
-    fit <- Rajive(ub$blocks, initial_signal_ranks = c(1L, 1L, 1L),
-                  missing = "native", mask = ub$mask, joint_rank = 5L),
-    class = "rajiveplus_joint_rank_truncated"
+  condition <- expect_error(
+    Rajive(ub$blocks, initial_signal_ranks = c(1L, 1L, 1L),
+           missing = "native", mask = ub$mask, joint_rank = 5L),
+    class = "rajiveplus_invalid_input"
   )
-  expect_lt(get_joint_rank(fit), 5L)
+  expect_identical(condition$argument, "joint_rank")
+  expect_identical(condition$reason, "out_of_bounds")
 })
 
 test_that("auto-rank selection is reproducible with a fixed seed", {
