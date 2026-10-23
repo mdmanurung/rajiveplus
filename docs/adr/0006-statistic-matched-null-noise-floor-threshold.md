@@ -74,13 +74,22 @@ component in one of ten dev seeds.
 
 Confirmation on untouched seeds (offset 42000, B=200 null / B=100 rank-1 /
 B=100 rank-2, full `Rajive()` pipeline with `n_perm_samples=1000`,
-`n_rand_dir_samples=200`, `n_wedin_samples=200`): recorded in
+`n_rand_dir_samples=200`, `n_wedin_samples=200`): Type-I 0.08 (PASS,
+<= 0.10), rank-1 exact 0.96 / over 0.00 (PASS), rank-2 exact 0.46 / over
+0.00 (**FAIL**, target >= 0.80). Recorded in
 `validation/2026-10-22-stage2-rankrule/README.md`.
 
 ## Consequences
 
-- Rank-2 exact recovery improves from 0.36 (pre-fix instrument) to the
-  confirmation value; Type-I remains bounded at the 0.10 gate.
+- Rank-2 exact recovery improves from 0.36 (pre-fix instrument) to 0.46 on
+  the confirmation fixture; Type-I remains inside the 0.10 gate (0.08) and
+  over-selection stays at 0.00. The 0.80 rank-2 exact-recovery target is NOT
+  met: the slow-manifest calibration gate remains FAIL, the version remains
+  0.1.0, and no broad calibration claims are made. The residual
+  under-selection is rule-level — the second joint component's
+  summed-projector amplitude sits too close to the permutation null's 95th
+  percentile on this fixture; a more powerful statistic or null is future
+  work.
 - Fits are bit-different from the pre-fix default whenever
   `joint_rank = NA` or the identifiability filter engages: the permutation
   threshold and the filter can both select differently. Value-pinning

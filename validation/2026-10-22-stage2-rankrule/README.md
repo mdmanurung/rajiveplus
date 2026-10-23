@@ -40,19 +40,27 @@ Full `Rajive()` pipeline, configuration identical to
 num_cores=1`, `simulate_blocks(n=60, pks=c(50,40,30),
 individual_ranks=c(5,4,3))`.
 
-Status at snapshot time (2026-10-23 02:00 UTC): **IN PROGRESS**. Completed
-cells:
+Status: **COMPLETE** (2026-10-23 03:14 UTC). Final results
+(`confirmation_results.json`):
 
-- Null (B=200): **Type-I = 1/200 = 0.005** (target <= 0.10) — PASS.
-- Rank-1 (B=100) and rank-2 (B=100): running; checkpoints land in
-  `/mnt/shared-workspace/rajive_stage2/calibration/` (`checkpoint_rank1.rds`,
-  `checkpoint_rank2.rds`) and the final verdict in
-  `confirmation_results.json` (`gate_pass` field).
+- Null (B=200): **Type-I = 0.08** (16/200; target <= 0.10) — PASS, but near
+  the boundary. (An interim read of a partial checkpoint reported 0.005;
+  that was a pre-filled-zero artifact, corrected here.)
+- Rank-1 (B=100): **exact = 0.96, over = 0.00** — PASS.
+- Rank-2 (B=100): **exact = 0.46 (46/100), under = 0.54 (52 selected 1, 2
+  selected 0), over = 0.00** — FAIL (target >= 0.80).
+- **Gate: FAIL** (`gate_pass: false`).
 
 ## Verdict
 
-PENDING the rank-1/rank-2 confirmation cells. The version remains 0.1.0 and
-the release-checklist slow-manifest row remains un-promoted until the
-confirmation completes; per the stage gate rule, 0.2.0 requires all
-mandatory local gates to pass. Development-pilot evidence (B=25/cell) and
-the confirmed null cell support the fix; the confirmation is the authority.
+The slow-manifest calibration gate FAILS at rank 2. The two fixes improve
+rank-2 exact recovery from 0.36 (pre-fix instrument) to 0.46 and keep
+Type-I inside the gate with zero over-selection, but the second joint
+component's summed-projector amplitude remains too close to the
+permutation null's 95th percentile for the 0.80 exact-recovery target on
+this fixture. The version remains **0.1.0**; the release-checklist
+slow-manifest row stays FAIL with the improved numbers. Rank-2
+under-selection is now entirely rule-level (the noise-floor filter fix
+removed the knife-edge filter drops); closing the gap requires a more
+powerful selection statistic or a different null construction, which is
+future work beyond this stage's bounded iteration.
