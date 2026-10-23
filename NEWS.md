@@ -2,6 +2,20 @@
 
 ## Scientific corrections
 
+### Joint-rank selection: statistic-matched permutation null and noise-floor identifiability threshold (defect R1)
+
+Two threshold mechanisms were miscalibrated against the orthonormal default's
+observed statistic. The permutation null now orthonormalizes each block basis
+before row-permutation, so the null statistic matches the observed statistic
+(orthonormalized stacked bases); the previous raw-stack null inflated the
+threshold and depressed rank-2 exact recovery (0.36 on the corrected
+instrument). The identifiability threshold is now the first noise singular
+value (the largest observed noise direction) instead of the midpoint between
+the last signal and first noise singular values; the midpoint rejected joint
+directions whose projections exceeded every observed noise singular value.
+Fits are bit-different whenever `joint_rank = NA` or the identifiability
+filter engages. See `docs/adr/0006-statistic-matched-null-noise-floor-threshold.md`.
+
 ### Preprocessing policy is recorded and uncentred blocks are detected (defect S1)
 
 The estimator applies no centering or scaling; that policy is now recorded in
