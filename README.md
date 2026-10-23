@@ -633,3 +633,11 @@ A few caveats worth keeping in mind when interpreting `Rajive()` output:
 - For survival outcomes, prefer `split = "none"` (continuous-score Cox
   model) for primary inference; median/tertile splits are data-adaptive
   and may be anti-conservative.
+
+## Companion reproducibility repository
+
+The paper workflow that runs against this package — with the package pinned
+as a git submodule at this stage's commit — lives at
+[`mdmanurung/rajiveplus-reproducibility`](https://github.com/mdmanurung/rajiveplus-reproducibility).
+Its `config/package.yaml` records the pinned commit and the install
+procedure.
